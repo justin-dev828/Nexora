@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+httpx
+itsdangerous
+aiosqlite
+python-dotenv
