@@ -2,7 +2,7 @@
 Der Bot kann überall laufen, er spricht nur per Internet mit deiner Dashboard-Seite.
 
 Umgebungsvariablen beim Bot:
-  DASHBOARD_URL = https://DEINE-SEITE.pages.dev (oder deine eigene Domain)
+  DASHBOARD_URL = https://nexora-sio.pages.dev/ (oder deine eigene Domain)
   BOT_API_KEY   = derselbe geheime Schlüssel wie bei der Webseite (BOT_API_KEY)
 """
 import os
