@@ -1,115 +1,561 @@
 <!DOCTYPE html>
 <html lang="de">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Nexora Dashboard</title>
-<style>
-:root{--bg:#f3f1fb;--card:#fff;--soft:#ece8fa;--tx:#1b1740;--mu:#6b668f;--bd:#ddd8f3;--p:#7c4dff;--b:#3b82f6;--ok:#22c55e;--grad:linear-gradient(135deg,#7c4dff,#3b82f6);color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d0b1f;--card:#17142f;--soft:#211d44;--tx:#eceaff;--mu:#9a95c4;--bd:#2c2759;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#0d0b1f;--card:#17142f;--soft:#211d44;--tx:#eceaff;--mu:#9a95c4;--bd:#2c2759;color-scheme:dark}
-*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;background:var(--bg);color:var(--tx);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh}
-body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:10}
-button{font:inherit;cursor:pointer;border:0;color:inherit}
-.hide{display:none!important}
-.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px}
-.logo i{width:34px;height:34px;border-radius:10px;background:var(--grad);display:grid;place-items:center;color:#fff;font-style:normal}
-.btn{background:var(--grad);color:#fff;padding:12px 22px;border-radius:12px;font-weight:700;box-shadow:0 8px 24px rgba(124,77,255,.35)}
-.btn.sec{background:var(--soft);color:var(--tx);box-shadow:none}
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
+  <title>
+   Nexora Dashboard
+  </title>
+  <style>
+   :root {
+  --bg:#f3f1fb;
+  --card:#fff;
+  --soft:#ece8fa;
+  --tx:#1b1740;
+  --mu:#6b668f;
+  --bd:#ddd8f3;
+  --p:#7c4dff;
+  --b:#3b82f6;
+  --ok:#22c55e;
+  --grad:linear-gradient(135deg,#7c4dff,#3b82f6);
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px)
+}
+@media (prefers-color-scheme:dark) {
+  :root:not([data-theme="light"]){--bg:#0d0b1f;
+  --card:#17142f;
+  --soft:#211d44;
+  --tx:#eceaff;
+  --mu:#9a95c4;
+  --bd:#2c2759;
+  color-scheme:dark}
+}
+:root[data-theme="dark"] {
+  --bg:#0d0b1f;
+  --card:#17142f;
+  --soft:#211d44;
+  --tx:#eceaff;
+  --mu:#9a95c4;
+  --bd:#2c2759;
+  color-scheme:dark
+}
+* {
+  box-sizing:border-box
+}
+html {
+  scroll-padding-top:env(safe-area-inset-top,0px)
+}
+body {
+  margin:0;
+  background:var(--bg);
+  color:var(--tx);
+  font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+  min-height:100vh
+}
+body::before {
+  content:"";
+  position:fixed;
+  inset:0 0 auto;
+  height:env(safe-area-inset-top,0px);
+  background:var(--bg);
+  z-index:10
+}
+button {
+  font:inherit;
+  cursor:pointer;
+  border:0;
+  color:inherit
+}
+.hide {
+  display:none!important
+}
+.logo {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-weight:800;
+  font-size:20px
+}
+.logo i {
+  width:34px;
+  height:34px;
+  border-radius:10px;
+  background:var(--grad);
+  display:grid;
+  place-items:center;
+  color:#fff;
+  font-style:normal
+}
+.btn {
+  background:var(--grad);
+  color:#fff;
+  padding:12px 22px;
+  border-radius:12px;
+  font-weight:700;
+  box-shadow:0 8px 24px rgba(124,77,255,.35)
+}
+.btn.sec {
+  background:var(--soft);
+  color:var(--tx);
+  box-shadow:none
+}
 /* login */
-.login{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(600px 400px at 20% 10%,rgba(124,77,255,.35),transparent),radial-gradient(600px 400px at 85% 90%,rgba(59,130,246,.3),transparent)}
-.box{background:var(--card);border:1px solid var(--bd);border-radius:24px;padding:40px 32px;max-width:420px;width:100%;text-align:center}
-.box h1{margin:20px 0 8px;font-size:28px}.box p{color:var(--mu);margin:0 0 24px;line-height:1.5}
-.dc{display:inline-flex;gap:10px;align-items:center;background:#5865f2;color:#fff;padding:13px 24px;border-radius:12px;font-weight:700}
-.fine{font-size:12px;color:var(--mu);margin-top:16px}
+.login {
+  min-height:100vh;
+  display:grid;
+  place-items:center;
+  padding:24px;
+  background:radial-gradient(600px 400px at 20% 10%,rgba(124,77,255,.35),transparent),radial-gradient(600px 400px at 85% 90%,rgba(59,130,246,.3),transparent)
+}
+.box {
+  background:var(--card);
+  border:1px solid var(--bd);
+  border-radius:24px;
+  padding:40px 32px;
+  max-width:420px;
+  width:100%;
+  text-align:center
+}
+.box h1 {
+  margin:20px 0 8px;
+  font-size:28px
+}
+.box p {
+  color:var(--mu);
+  margin:0 0 24px;
+  line-height:1.5
+}
+.dc {
+  display:inline-flex;
+  gap:10px;
+  align-items:center;
+  background:#5865f2;
+  color:#fff;
+  padding:13px 24px;
+  border-radius:12px;
+  font-weight:700
+}
+.fine {
+  font-size:12px;
+  color:var(--mu);
+  margin-top:16px
+}
 /* servers */
-.wrap{max-width:900px;margin:0 auto;padding:24px 16px}
-.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;gap:12px}
-.user{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--mu)}
-.av{width:34px;height:34px;border-radius:50%;background:var(--grad);display:grid;place-items:center;color:#fff;font-weight:700}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
-.srv{background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:14px}
-.srv .h{display:flex;gap:12px;align-items:center}
-.ic{width:46px;height:46px;border-radius:14px;background:var(--soft);display:grid;place-items:center;font-weight:800;color:var(--p)}
-.srv small{color:var(--mu)}
-.srv .btn{padding:10px;font-size:14px}
+.wrap {
+  max-width:900px;
+  margin:0 auto;
+  padding:24px 16px
+}
+.top {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:28px;
+  gap:12px
+}
+.user {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-size:14px;
+  color:var(--mu)
+}
+.av {
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  background:var(--grad);
+  display:grid;
+  place-items:center;
+  color:#fff;
+  font-weight:700
+}
+.grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+  gap:14px
+}
+.srv {
+  background:var(--card);
+  border:1px solid var(--bd);
+  border-radius:18px;
+  padding:18px;
+  display:flex;
+  flex-direction:column;
+  gap:14px
+}
+.srv .h {
+  display:flex;
+  gap:12px;
+  align-items:center
+}
+.ic {
+  width:46px;
+  height:46px;
+  border-radius:14px;
+  background:var(--soft);
+  display:grid;
+  place-items:center;
+  font-weight:800;
+  color:var(--p)
+}
+.srv small {
+  color:var(--mu)
+}
+.srv .btn {
+  padding:10px;
+  font-size:14px
+}
 /* dash */
-.dash{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
-aside{background:var(--card);border-right:1px solid var(--bd);padding:18px 12px;position:sticky;top:0;height:100vh;overflow:auto}
-aside .logo{padding:0 8px 16px}
-.cur{display:flex;gap:10px;align-items:center;background:var(--soft);border-radius:12px;padding:10px;margin:0 0 14px;width:100%;text-align:left}
-.cur b{display:block;font-size:14px}.cur small{color:var(--mu);font-size:12px}
-nav button{display:flex;gap:10px;align-items:center;width:100%;background:none;padding:10px 12px;border-radius:10px;color:var(--mu);font-weight:600;font-size:14px;text-align:left}
-nav button:hover{background:var(--soft)}
-nav button.on{background:var(--grad);color:#fff}
-main{padding:28px;max-width:860px;width:100%}
-main h2{margin:0 0 4px;font-size:26px}.sub{color:var(--mu);margin:0 0 22px}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:20px;margin-bottom:16px}
-.card h3{margin:0 0 4px;font-size:16px}.card>p{margin:0 0 14px;color:var(--mu);font-size:14px}
-.row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:12px 0;border-top:1px solid var(--bd)}
-.row:first-of-type{border-top:0}
-.row label{font-size:14px;font-weight:600}.row span{display:block;font-weight:400;color:var(--mu);font-size:12px;margin-top:2px}
-code{background:var(--soft);padding:2px 7px;border-radius:6px;font-size:13px;color:var(--p)}
-input[type=number],input[type=text],select{background:var(--soft);border:1px solid var(--bd);color:var(--tx);border-radius:10px;padding:9px 12px;font:inherit;font-size:14px;width:150px}
-.sw{position:relative;width:44px;height:25px;flex:none}
-.sw input{opacity:0;position:absolute;inset:0;margin:0;cursor:pointer;z-index:1}
-.sw i{position:absolute;inset:0;background:var(--bd);border-radius:20px;transition:.2s}
-.sw i::after{content:"";position:absolute;left:3px;top:3px;width:19px;height:19px;border-radius:50%;background:#fff;transition:.2s}
-.sw input:checked+i{background:var(--grad)}.sw input:checked+i::after{transform:translateX(19px)}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
-.stat{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:16px}
-.stat b{font-size:24px;display:block;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
-.stat small{color:var(--mu)}
-.warn{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);border-radius:14px;padding:12px 16px;font-size:14px;margin-bottom:16px}
-.bar{position:sticky;bottom:calc(12px + env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:12px 16px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
-.bar span{font-size:14px;color:var(--mu)}
-.danger{background:#ef4444;color:#fff;padding:10px 16px;border-radius:10px;font-weight:700}
-.tag{font-size:11px;background:var(--soft);color:var(--p);padding:3px 8px;border-radius:20px;margin-left:8px;font-weight:700}
-.menu{display:none}
-@media(max-width:760px){.dash{grid-template-columns:1fr}aside{position:fixed;inset:0 30% 0 0;z-index:20;transform:translateX(-100%);transition:.25s;height:100%}aside.open{transform:none}.menu{display:inline-block;background:var(--soft);padding:8px 12px;border-radius:10px;margin-bottom:14px}main{padding:18px 14px}.row{flex-wrap:wrap}}
-.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--grad);color:#fff;padding:10px 20px;border-radius:12px;font-weight:700;z-index:30}
-</style>
-</head>
-<body>
-
-<section id="login" class="login">
- <div class="box">
-  <div class="logo" style="justify-content:center"><i>N</i>Nexora</div>
-  <h1>Willkommen zurück</h1>
-  <p>Melde dich mit Discord an, wähle deinen Server und passe Nexora ganz nach deinen Wünschen an.</p>
-  <button class="dc" onclick="go('servers')">🎮 Mit Discord anmelden</button>
-  <div class="fine">Nexora liest nur deine Nutzer-ID und deine Serverliste (Scopes: identify, guilds). Demo-Modus.</div>
- </div>
-</section>
-
-<section id="servers" class="hide">
- <div class="wrap">
-  <div class="top">
-   <div class="logo"><i>N</i>Nexora</div>
-   <div class="user"><div class="av">M</div>Max · <button class="btn sec" style="padding:7px 12px" onclick="go('login')">Abmelden</button></div>
-  </div>
-  <h2 style="margin:0 0 4px">Wähle einen Server</h2>
-  <p class="sub">Hier siehst du alle Server, auf denen du Verwalter bist.</p>
-  <div class="grid" id="srvGrid"></div>
- </div>
-</section>
-
-<section id="dash" class="hide dash">
- <aside id="side">
-  <div class="logo"><i>N</i>Nexora</div>
-  <button class="cur" onclick="go('servers')"><div class="ic" id="curIc"></div><div><b id="curName"></b><small>Server wechseln ⇄</small></div></button>
-  <nav id="nav"></nav>
- </aside>
- <main>
-  <button class="menu" onclick="document.getElementById('side').classList.toggle('open')">☰ Menü</button>
-  <div id="view"></div>
-  <div class="bar"><span id="dirty">Keine ungespeicherten Änderungen</span><button class="btn" onclick="save()">Speichern</button></div>
- </main>
-</section>
-
-<script>
-var SERVERS=[
+.dash {
+  display:grid;
+  grid-template-columns:240px 1fr;
+  min-height:100vh
+}
+aside {
+  background:var(--card);
+  border-right:1px solid var(--bd);
+  padding:18px 12px;
+  position:sticky;
+  top:0;
+  height:100vh;
+  overflow:auto
+}
+aside .logo {
+  padding:0 8px 16px
+}
+.cur {
+  display:flex;
+  gap:10px;
+  align-items:center;
+  background:var(--soft);
+  border-radius:12px;
+  padding:10px;
+  margin:0 0 14px;
+  width:100%;
+  text-align:left
+}
+.cur b {
+  display:block;
+  font-size:14px
+}
+.cur small {
+  color:var(--mu);
+  font-size:12px
+}
+nav button {
+  display:flex;
+  gap:10px;
+  align-items:center;
+  width:100%;
+  background:none;
+  padding:10px 12px;
+  border-radius:10px;
+  color:var(--mu);
+  font-weight:600;
+  font-size:14px;
+  text-align:left
+}
+nav button:hover {
+  background:var(--soft)
+}
+nav button.on {
+  background:var(--grad);
+  color:#fff
+}
+main {
+  padding:28px;
+  max-width:860px;
+  width:100%
+}
+main h2 {
+  margin:0 0 4px;
+  font-size:26px
+}
+.sub {
+  color:var(--mu);
+  margin:0 0 22px
+}
+.card {
+  background:var(--card);
+  border:1px solid var(--bd);
+  border-radius:18px;
+  padding:20px;
+  margin-bottom:16px
+}
+.card h3 {
+  margin:0 0 4px;
+  font-size:16px
+}
+.card>p {
+  margin:0 0 14px;
+  color:var(--mu);
+  font-size:14px
+}
+.row {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:14px;
+  padding:12px 0;
+  border-top:1px solid var(--bd)
+}
+.row:first-of-type {
+  border-top:0
+}
+.row label {
+  font-size:14px;
+  font-weight:600
+}
+.row span {
+  display:block;
+  font-weight:400;
+  color:var(--mu);
+  font-size:12px;
+  margin-top:2px
+}
+code {
+  background:var(--soft);
+  padding:2px 7px;
+  border-radius:6px;
+  font-size:13px;
+  color:var(--p)
+}
+input[type=number],input[type=text],select {
+  background:var(--soft);
+  border:1px solid var(--bd);
+  color:var(--tx);
+  border-radius:10px;
+  padding:9px 12px;
+  font:inherit;
+  font-size:14px;
+  width:150px
+}
+.sw {
+  position:relative;
+  width:44px;
+  height:25px;
+  flex:none
+}
+.sw input {
+  opacity:0;
+  position:absolute;
+  inset:0;
+  margin:0;
+  cursor:pointer;
+  z-index:1
+}
+.sw i {
+  position:absolute;
+  inset:0;
+  background:var(--bd);
+  border-radius:20px;
+  transition:.2s
+}
+.sw i::after {
+  content:"";
+  position:absolute;
+  left:3px;
+  top:3px;
+  width:19px;
+  height:19px;
+  border-radius:50%;
+  background:#fff;
+  transition:.2s
+}
+.sw input:checked+i {
+  background:var(--grad)
+}
+.sw input:checked+i::after {
+  transform:translateX(19px)
+}
+.stats {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:12px;
+  margin-bottom:16px
+}
+.stat {
+  background:var(--card);
+  border:1px solid var(--bd);
+  border-radius:16px;
+  padding:16px
+}
+.stat b {
+  font-size:24px;
+  display:block;
+  background:var(--grad);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent
+}
+.stat small {
+  color:var(--mu)
+}
+.warn {
+  background:rgba(245,158,11,.12);
+  border:1px solid rgba(245,158,11,.4);
+  border-radius:14px;
+  padding:12px 16px;
+  font-size:14px;
+  margin-bottom:16px
+}
+.bar {
+  position:sticky;
+  bottom:calc(12px + env(safe-area-inset-bottom,0px));
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  background:var(--card);
+  border:1px solid var(--bd);
+  border-radius:16px;
+  padding:12px 16px;
+  box-shadow:0 10px 30px rgba(0,0,0,.2)
+}
+.bar span {
+  font-size:14px;
+  color:var(--mu)
+}
+.danger {
+  background:#ef4444;
+  color:#fff;
+  padding:10px 16px;
+  border-radius:10px;
+  font-weight:700
+}
+.tag {
+  font-size:11px;
+  background:var(--soft);
+  color:var(--p);
+  padding:3px 8px;
+  border-radius:20px;
+  margin-left:8px;
+  font-weight:700
+}
+.menu {
+  display:none
+}
+@media(max-width:760px) {
+  .dash{grid-template-columns:1fr}aside{position:fixed;
+  inset:0 30% 0 0;
+  z-index:20;
+  transform:translateX(-100%);
+  transition:.25s;
+  height:100%}aside.open{transform:none}.menu{display:inline-block;
+  background:var(--soft);
+  padding:8px 12px;
+  border-radius:10px;
+  margin-bottom:14px}main{padding:18px 14px}.row{flex-wrap:wrap}
+}
+.toast {
+  position:fixed;
+  left:50%;
+  bottom:90px;
+  transform:translateX(-50%);
+  background:var(--grad);
+  color:#fff;
+  padding:10px 20px;
+  border-radius:12px;
+  font-weight:700;
+  z-index:30
+}
+  </style>
+ </head>
+ <body>
+  <section class="login" id="login">
+   <div class="box">
+    <div class="logo" style="justify-content:center">
+     <i>
+      N
+     </i>
+     Nexora
+    </div>
+    <h1>
+     Willkommen zurück
+    </h1>
+    <p>
+     Melde dich mit Discord an, wähle deinen Server und passe Nexora ganz nach deinen Wünschen an.
+    </p>
+    <button class="dc" onclick="go('servers')">
+     🎮 Mit Discord anmelden
+    </button>
+    <div class="fine">
+     Nexora liest nur deine Nutzer-ID und deine Serverliste (Scopes: identify, guilds). Demo-Modus.
+    </div>
+   </div>
+  </section>
+  <section class="hide" id="servers">
+   <div class="wrap">
+    <div class="top">
+     <div class="logo">
+      <i>
+       N
+      </i>
+      Nexora
+     </div>
+     <div class="user">
+      <div class="av">
+       M
+      </div>
+      Max ·
+      <button class="btn sec" onclick="go('login')" style="padding:7px 12px">
+       Abmelden
+      </button>
+     </div>
+    </div>
+    <h2 style="margin:0 0 4px">
+     Wähle einen Server
+    </h2>
+    <p class="sub">
+     Hier siehst du alle Server, auf denen du Verwalter bist.
+    </p>
+    <div class="grid" id="srvGrid">
+    </div>
+   </div>
+  </section>
+  <section class="hide dash" id="dash">
+   <aside id="side">
+    <div class="logo">
+     <i>
+      N
+     </i>
+     Nexora
+    </div>
+    <button class="cur" onclick="go('servers')">
+     <div class="ic" id="curIc">
+     </div>
+     <div>
+      <b id="curName">
+      </b>
+      <small>
+       Server wechseln ⇄
+      </small>
+     </div>
+    </button>
+    <nav id="nav">
+    </nav>
+   </aside>
+   <main>
+    <button class="menu" onclick="document.getElementById('side').classList.toggle('open')">
+     ☰ Menü
+    </button>
+    <div id="view">
+    </div>
+    <div class="bar">
+     <span id="dirty">
+      Keine ungespeicherten Änderungen
+     </span>
+     <button class="btn" onclick="save()">
+      Speichern
+     </button>
+    </div>
+   </main>
+  </section>
+  <script>
+   var SERVERS=[
  {id:"1",name:"Gaming Lounge",members:482,bot:true},
  {id:"2",name:"Lernserver Hessen",members:129,bot:true},
  {id:"3",name:"Freunde & Chaos",members:24,bot:false}
@@ -190,6 +636,6 @@ function save(){try{localStorage.setItem("nx"+cur.id,JSON.stringify(st))}catch(e
  dirty=false;$("dirty").textContent="Keine ungespeicherten Änderungen";toast("✓ Gespeichert für "+cur.name)}
 function toast(t){var e=document.createElement("div");e.className="toast";e.textContent=t;document.body.appendChild(e);setTimeout(function(){e.remove()},2200)}
 init();
-</script>
-</body>
+  </script>
+ </body>
 </html>
