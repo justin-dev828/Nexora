@@ -1,48 +1,100 @@
-"""So arbeitet dein discord.py-Bot mit dem Nexora-Dashboard auf Netlify zusammen.
-Der Bot kann überall laufen, er spricht nur per Internet mit deiner Dashboard-Seite.
-
-Umgebungsvariablen beim Bot:
-  DASHBOARD_URL = https://nexora-sio.pages.dev/ (oder deine eigene Domain)
-  BOT_API_KEY   = derselbe geheime Schlüssel wie bei der Webseite (BOT_API_KEY)
-"""
 import os
 import time
+import logging
 
 import aiohttp
 from discord.ext import tasks
 
-DASHBOARD_URL = os.environ["DASHBOARD_URL"].rstrip("/")
-HEAD = {"Authorization": f"Bearer {os.environ['BOT_API_KEY']}"}
+log = logging.getLogger(__name__)
+
+DASHBOARD_URL = os.getenv(
+    "DASHBOARD_URL",
+    "https://nexora-sio.pages.dev"
+).rstrip("/")
+
+BOT_API_KEY = os.getenv("BOT_API_KEY")
+
+if not BOT_API_KEY:
+    raise RuntimeError("BOT_API_KEY fehlt in den Umgebungsvariablen.")
+
+HEAD = {"Authorization": f"Bearer {BOT_API_KEY}"}
 START = time.time()
-_cache: dict = {}
+
+_cache: dict[int, tuple[float, dict]] = {}
+_session: aiohttp.ClientSession | None = None
+bot = None
 
 
-# ---------- 1) Einstellungen eines Servers holen (30 Sek. zwischengespeichert) ----------
+async def setup_dashboard(bot_instance):
+    """Verbindet das Dashboard mit dem Discord-Bot."""
+    global bot, _session
+
+    bot = bot_instance
+
+    if _session is None or _session.closed:
+        _session = aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=5)
+        )
+
+    if not heartbeat.is_running():
+        heartbeat.start()
+
+
+async def close_dashboard():
+    """Schließt die Dashboard-Verbindung."""
+    if heartbeat.is_running():
+        heartbeat.cancel()
+
+    if _session and not _session.closed:
+        await _session.close()
+
+
 async def get_cfg(guild_id: int) -> dict:
+    """Lädt Servereinstellungen mit 30 Sekunden Cache."""
     hit = _cache.get(guild_id)
+
     if hit and time.time() - hit[0] < 30:
         return hit[1]
+
     try:
-        async with aiohttp.ClientSession() as s:
-            async with s.get(f"{DASHBOARD_URL}/api/bot/settings/{guild_id}", headers=HEAD,
-                             timeout=aiohttp.ClientTimeout(total=5)) as r:
-                if r.status == 200:
-                    cfg = await r.json()
-                    _cache[guild_id] = (time.time(), cfg)
-                    return cfg
-    except Exception:
-        pass
-    return hit[1] if hit else {}  # Dashboard nicht erreichbar -> letzte bekannte Werte
+        async with _session.get(
+            f"{DASHBOARD_URL}/api/bot/settings/{guild_id}",
+            headers=HEAD,
+        ) as response:
+            if response.status == 200:
+                cfg = await response.json()
+                _cache[guild_id] = (time.time(), cfg)
+                return cfg
+
+            log.warning(
+                "Dashboard-Einstellungen: HTTP %s",
+                response.status,
+            )
+
+    except (aiohttp.ClientError, TimeoutError) as exc:
+        log.warning("Dashboard nicht erreichbar: %s", exc)
+
+    return hit[1] if hit else {}
 
 
-def command_enabled(cfg: dict, module: str, command: str) -> bool:
-    return cfg.get(f"{module}.on", True) and cfg.get(f"c.{command}", True)
+def command_enabled(
+    cfg: dict,
+    module: str,
+    command: str,
+) -> bool:
+    """Prüft, ob Modul und Befehl aktiviert sind."""
+    return (
+        cfg.get(f"{module}.on", True)
+        and cfg.get(f"c.{command}", True)
+    )
 
 
-# ---------- 2) Status für den Tracker (alle 30 Sekunden) ----------
-# Unten "bot" durch deine Bot-Instanz ersetzen (commands.Bot oder discord.Client mit CommandTree).
 @tasks.loop(seconds=30)
 async def heartbeat():
+    """Sendet Bot-Statistiken an das Dashboard."""
+    if bot is None or _session is None or _session.closed:
+        return
+
     data = {
         "servers": len(bot.guilds),
         "users": sum(g.member_count or 0 for g in bot.guilds),
@@ -50,23 +102,23 @@ async def heartbeat():
         "commands": len(bot.tree.get_commands()),
         "started": START,
     }
+
     try:
-        async with aiohttp.ClientSession() as s:
-            await s.post(f"{DASHBOARD_URL}/api/bot/heartbeat", json=data, headers=HEAD,
-                         timeout=aiohttp.ClientTimeout(total=5))
-    except Exception:
-        pass
+        async with _session.post(
+            f"{DASHBOARD_URL}/api/bot/heartbeat",
+            json=data,
+            headers=HEAD,
+        ) as response:
+            if response.status >= 400:
+                log.warning(
+                    "Heartbeat fehlgeschlagen: HTTP %s",
+                    response.status,
+                )
 
-# Starten, z. B. in setup_hook oder on_ready:   heartbeat.start()
+    except (aiohttp.ClientError, TimeoutError) as exc:
+        log.warning("Heartbeat fehlgeschlagen: %s", exc)
 
-# Beispiel in einem Slash-Befehl:
-#
-# @bot.tree.command(name="belohnung")
-# async def belohnung(inter: discord.Interaction):
-#     cfg = await get_cfg(inter.guild_id)
-#     if not cfg.get("logch"):
-#         return await inter.response.send_message("Bitte erst /logkanal einrichten.", ephemeral=True)
-#     if not command_enabled(cfg, "eco", "belohnung"):
-#         return await inter.response.send_message("Befehl ist hier deaktiviert.", ephemeral=True)
-#     betrag = cfg["daily"]
-#     ...
+
+@heartbeat.before_loop
+async def before_heartbeat():
+    await bot.wait_until_ready()
