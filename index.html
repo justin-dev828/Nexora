@@ -5,21 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Nexora Dashboard</title>
 <style>
-:root{--bg:#f3f1fb;--card:#fff;--soft:#ece8fa;--tx:#1b1740;--mu:#6b668f;--bd:#ddd8f3;--p:#7c4dff;--b:#3b82f6;--grad:linear-gradient(135deg,#7c4dff,#3b82f6);color-scheme:light}
-@media (prefers-color-scheme:dark){:root{--bg:#0d0b1f;--card:#17142f;--soft:#211d44;--tx:#eceaff;--mu:#9a95c4;--bd:#2c2759;color-scheme:dark}}
-*{box-sizing:border-box}
+:root{--bg:#f3f1fb;--card:#fff;--soft:#ece8fa;--tx:#1b1740;--mu:#6b668f;--bd:#ddd8f3;--p:#7c4dff;--b:#3b82f6;--ok:#22c55e;--grad:linear-gradient(135deg,#7c4dff,#3b82f6);color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d0b1f;--card:#17142f;--soft:#211d44;--tx:#eceaff;--mu:#9a95c4;--bd:#2c2759;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0d0b1f;--card:#17142f;--soft:#211d44;--tx:#eceaff;--mu:#9a95c4;--bd:#2c2759;color-scheme:dark}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--tx);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh}
-a{color:var(--p)}button{font:inherit;cursor:pointer;border:0;color:inherit}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:10}
+button{font:inherit;cursor:pointer;border:0;color:inherit}
 .hide{display:none!important}
 .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px}
 .logo i{width:34px;height:34px;border-radius:10px;background:var(--grad);display:grid;place-items:center;color:#fff;font-style:normal}
-.btn{display:inline-block;background:var(--grad);color:#fff;padding:12px 22px;border-radius:12px;font-weight:700;box-shadow:0 8px 24px rgba(124,77,255,.35);text-decoration:none;text-align:center}
+.btn{background:var(--grad);color:#fff;padding:12px 22px;border-radius:12px;font-weight:700;box-shadow:0 8px 24px rgba(124,77,255,.35)}
 .btn.sec{background:var(--soft);color:var(--tx);box-shadow:none}
+/* login */
 .login{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(600px 400px at 20% 10%,rgba(124,77,255,.35),transparent),radial-gradient(600px 400px at 85% 90%,rgba(59,130,246,.3),transparent)}
 .box{background:var(--card);border:1px solid var(--bd);border-radius:24px;padding:40px 32px;max-width:420px;width:100%;text-align:center}
 .box h1{margin:20px 0 8px;font-size:28px}.box p{color:var(--mu);margin:0 0 24px;line-height:1.5}
-.dc{display:inline-flex;gap:10px;align-items:center;background:#5865f2;color:#fff;padding:13px 24px;border-radius:12px;font-weight:700;text-decoration:none}
+.dc{display:inline-flex;gap:10px;align-items:center;background:#5865f2;color:#fff;padding:13px 24px;border-radius:12px;font-weight:700}
 .fine{font-size:12px;color:var(--mu);margin-top:16px}
+/* servers */
 .wrap{max-width:900px;margin:0 auto;padding:24px 16px}
 .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;gap:12px}
 .user{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--mu)}
@@ -27,16 +31,18 @@ a{color:var(--p)}button{font:inherit;cursor:pointer;border:0;color:inherit}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
 .srv{background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:14px}
 .srv .h{display:flex;gap:12px;align-items:center}
-.ic{width:46px;height:46px;border-radius:14px;background:var(--soft);display:grid;place-items:center;font-weight:800;color:var(--p);overflow:hidden;flex:none}
-.ic img{width:100%;height:100%}
+.ic{width:46px;height:46px;border-radius:14px;background:var(--soft);display:grid;place-items:center;font-weight:800;color:var(--p)}
+.srv small{color:var(--mu)}
 .srv .btn{padding:10px;font-size:14px}
+/* dash */
 .dash{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
 aside{background:var(--card);border-right:1px solid var(--bd);padding:18px 12px;position:sticky;top:0;height:100vh;overflow:auto}
 aside .logo{padding:0 8px 16px}
 .cur{display:flex;gap:10px;align-items:center;background:var(--soft);border-radius:12px;padding:10px;margin:0 0 14px;width:100%;text-align:left}
 .cur b{display:block;font-size:14px}.cur small{color:var(--mu);font-size:12px}
 nav button{display:flex;gap:10px;align-items:center;width:100%;background:none;padding:10px 12px;border-radius:10px;color:var(--mu);font-weight:600;font-size:14px;text-align:left}
-nav button:hover{background:var(--soft)}nav button.on{background:var(--grad);color:#fff}
+nav button:hover{background:var(--soft)}
+nav button.on{background:var(--grad);color:#fff}
 main{padding:28px;max-width:860px;width:100%}
 main h2{margin:0 0 4px;font-size:26px}.sub{color:var(--mu);margin:0 0 22px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:20px;margin-bottom:16px}
@@ -45,7 +51,7 @@ main h2{margin:0 0 4px;font-size:26px}.sub{color:var(--mu);margin:0 0 22px}
 .row:first-of-type{border-top:0}
 .row label{font-size:14px;font-weight:600}.row span{display:block;font-weight:400;color:var(--mu);font-size:12px;margin-top:2px}
 code{background:var(--soft);padding:2px 7px;border-radius:6px;font-size:13px;color:var(--p)}
-input[type=number],input[type=text],select{background:var(--soft);border:1px solid var(--bd);color:var(--tx);border-radius:10px;padding:9px 12px;font:inherit;font-size:14px;width:170px}
+input[type=number],input[type=text],select{background:var(--soft);border:1px solid var(--bd);color:var(--tx);border-radius:10px;padding:9px 12px;font:inherit;font-size:14px;width:150px}
 .sw{position:relative;width:44px;height:25px;flex:none}
 .sw input{opacity:0;position:absolute;inset:0;margin:0;cursor:pointer;z-index:1}
 .sw i{position:absolute;inset:0;background:var(--bd);border-radius:20px;transition:.2s}
@@ -56,24 +62,24 @@ input[type=number],input[type=text],select{background:var(--soft);border:1px sol
 .stat b{font-size:24px;display:block;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 .stat small{color:var(--mu)}
 .warn{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);border-radius:14px;padding:12px 16px;font-size:14px;margin-bottom:16px}
-.bar{position:sticky;bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:12px 16px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
+.bar{position:sticky;bottom:calc(12px + env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:12px 16px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
 .bar span{font-size:14px;color:var(--mu)}
+.danger{background:#ef4444;color:#fff;padding:10px 16px;border-radius:10px;font-weight:700}
 .tag{font-size:11px;background:var(--soft);color:var(--p);padding:3px 8px;border-radius:20px;margin-left:8px;font-weight:700}
 .menu{display:none}
 @media(max-width:760px){.dash{grid-template-columns:1fr}aside{position:fixed;inset:0 30% 0 0;z-index:20;transform:translateX(-100%);transition:.25s;height:100%}aside.open{transform:none}.menu{display:inline-block;background:var(--soft);padding:8px 12px;border-radius:10px;margin-bottom:14px}main{padding:18px 14px}.row{flex-wrap:wrap}}
 .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--grad);color:#fff;padding:10px 20px;border-radius:12px;font-weight:700;z-index:30}
-.toast.err{background:#ef4444}
 </style>
 </head>
 <body>
 
-<section id="login" class="login hide">
+<section id="login" class="login">
  <div class="box">
   <div class="logo" style="justify-content:center"><i>N</i>Nexora</div>
   <h1>Willkommen zurück</h1>
   <p>Melde dich mit Discord an, wähle deinen Server und passe Nexora ganz nach deinen Wünschen an.</p>
-  <a class="dc" href="/login">🎮 Mit Discord anmelden</a>
-  <div class="fine">Nexora liest nur deine Nutzer-ID und deine Serverliste.</div>
+  <button class="dc" onclick="go('servers')">🎮 Mit Discord anmelden</button>
+  <div class="fine">Nexora liest nur deine Nutzer-ID und deine Serverliste (Scopes: identify, guilds). Demo-Modus.</div>
  </div>
 </section>
 
@@ -81,10 +87,10 @@ input[type=number],input[type=text],select{background:var(--soft);border:1px sol
  <div class="wrap">
   <div class="top">
    <div class="logo"><i>N</i>Nexora</div>
-   <div class="user"><div class="av" id="uav">?</div><span id="uname"></span><a class="btn sec" style="padding:7px 12px" href="/logout">Abmelden</a></div>
+   <div class="user"><div class="av">M</div>Max · <button class="btn sec" style="padding:7px 12px" onclick="go('login')">Abmelden</button></div>
   </div>
   <h2 style="margin:0 0 4px">Wähle einen Server</h2>
-  <p class="sub">Hier siehst du alle Server, auf denen du Verwalter bist. <a href="#" onclick="loadGuilds();return false">Neu laden</a></p>
+  <p class="sub">Hier siehst du alle Server, auf denen du Verwalter bist.</p>
   <div class="grid" id="srvGrid"></div>
  </div>
 </section>
@@ -98,94 +104,92 @@ input[type=number],input[type=text],select{background:var(--soft);border:1px sol
  <main>
   <button class="menu" onclick="document.getElementById('side').classList.toggle('open')">☰ Menü</button>
   <div id="view"></div>
-  <div class="bar"><span id="dirtyTxt">Keine ungespeicherten Änderungen</span><button class="btn" onclick="save()">Speichern</button></div>
+  <div class="bar"><span id="dirty">Keine ungespeicherten Änderungen</span><button class="btn" onclick="save()">Speichern</button></div>
  </main>
 </section>
 
 <script>
-// f = [Schlüssel, Bezeichnung, Hinweis, Typ]  (Standardwerte kommen vom Backend)
+var SERVERS=[
+ {id:"1",name:"Gaming Lounge",members:482,bot:true},
+ {id:"2",name:"Lernserver Hessen",members:129,bot:true},
+ {id:"3",name:"Freunde & Chaos",members:24,bot:false}
+];
+// Module: Einstellungen (f) + Befehle (c)
 var MODS=[
  {id:"home",ic:"🏠",t:"Übersicht"},
  {id:"log",ic:"📜",t:"Log-Kanal",d:"Pflicht: Ohne Log-Kanal ist der Bot gesperrt.",
-  f:[["logch","Log-Kanal","Hier landen alle Aktionen und Wartungen","sel"]],c:["logkanal"]},
+  f:[["logch","Log-Kanal","Hier landen alle Aktionen und Wartungen","sel",["– nicht gesetzt –","#logs","#mod-log","#bot-log"],""]],c:["logkanal"]},
  {id:"eco",ic:"💰",t:"Economy",d:"Währung, Belohnungen und Geldbeutel.",
-  f:[["cur","Währungsname","Wie heißt dein Geld?","txt"],["cursym","Symbol","","txt"],
-     ["daily","Tägliche Belohnung","Basisbetrag pro Abholung","num"],["streak","Streak-Bonus pro Tag","Zusatz für jeden Tag in Folge","num"],
-     ["workmin","Arbeiten: Minimum","","num"],["workmax","Arbeiten: Maximum","","num"],["workcd","Arbeiten: Abklingzeit (Min.)","","num"]],
+  f:[["cur","Währungsname","Wie heißt dein Geld?","txt","Coins"],
+     ["cursym","Symbol","","txt","🪙"],
+     ["daily","Tägliche Belohnung","Basisbetrag pro Abholung","num",100],
+     ["streak","Streak-Bonus pro Tag","Zusatz für jeden Tag in Folge","num",10],
+     ["workmin","Arbeiten: Minimum","","num",20],["workmax","Arbeiten: Maximum","","num",120],
+     ["workcd","Arbeiten: Abklingzeit (Min.)","","num",30]],
   c:["belohnung","arbeiten","kontostand","einzahlen","abheben","geben","rangliste"]},
  {id:"task",ic:"📅",t:"Tägliche Aufgaben",d:"Jeden Tag 3 neue Aufgaben mit Bonus.",
-  f:[["tcount","Aufgaben pro Tag","","num"],["treward","Belohnung pro Aufgabe","","num"],["tbonus","Bonus für alle 3","","num"],
-     ["tmsg","Nachrichten-Aufgaben","Schreibe X Nachrichten","tog"],["tvoice","Sprachkanal-Aufgaben","","tog"],
-     ["treact","Reaktions-Aufgaben","","tog"],["tshop","Shop-Aufgaben","","tog"]],
+  f:[["tcount","Aufgaben pro Tag","","num",3],["treward","Belohnung pro Aufgabe","","num",50],["tbonus","Bonus für alle 3","","num",100],
+     ["tmsg","Nachrichten-Aufgaben","Schreibe X Nachrichten","tog",true],["tvoice","Sprachkanal-Aufgaben","","tog",true],
+     ["treact","Reaktions-Aufgaben","","tog",true],["tshop","Shop-Aufgaben","","tog",true]],
   c:["aufgaben","aufgaben-abholen"]},
  {id:"shop",ic:"🛒",t:"Shop & Inventar",d:"Rollen und eigene Items anbieten.",
-  f:[["confirm","Sicherheitsabfrage beim Einlösen","Bestätigung vor /benutzen","tog"],
-     ["roles","Rollen im Shop erlauben","","tog"],["items","Eigene Items erlauben","","tog"]],
+  f:[["confirm","Sicherheitsabfrage beim Einlösen","Bestätigung vor /benutzen","tog",true],
+     ["roles","Rollen im Shop erlauben","","tog",true],["items","Eigene Items erlauben","","tog",true]],
   c:["shop","kaufen","inventar","benutzen","shop-hinzufuegen"]},
  {id:"mod",ic:"🛡️",t:"Moderation",d:"Kurze Befehle, jede Aktion erscheint im Log-Kanal.",
-  f:[["modlog","Aktionen im Log-Kanal anzeigen","","tog"],["warnmute","Auto-Mute ab Verwarnungen","0 = aus","num"]],
+  f:[["modlog","Aktionen im Log-Kanal anzeigen","","tog",true],["warnmute","Auto-Mute ab Verwarnungen","0 = aus","num",3]],
   c:["kick","ban","unban","mute","unmute","warn","unwarn","warnings","clear"]},
- {id:"admin",ic:"⚙️",t:"Admin-Tools",d:"Geld verwalten und Server-Einstellungen.",f:[],c:["einstellungen","geld-hinzufuegen","geld-entfernen"]},
+ {id:"admin",ic:"⚙️",t:"Admin-Tools",d:"Geld verwalten und Server-Einstellungen.",
+  f:[],c:["einstellungen","geld-hinzufuegen","geld-entfernen"]},
  {id:"data",ic:"🔒",t:"Daten & Sicherheit",d:"Deine Daten bleiben bei Neustarts erhalten, tägliche Sicherungen inklusive."}
 ];
-var GUILDS=[],CH=[],cur=null,st={},active="home";
+var cur=null,st={},dirty=false,active="home";
 function $(i){return document.getElementById(i)}
-function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
-function go(s){["login","servers","dash"].forEach(function(x){$(x).classList.add("hide")});$(s).classList.remove("hide");window.scrollTo(0,0)}
-function toast(t,err){var e=document.createElement("div");e.className="toast"+(err?" err":"");e.textContent=t;document.body.appendChild(e);setTimeout(function(){e.remove()},2600)}
-async function api(path,opt){
- var r=await fetch(path,opt);
- if(r.status==401){go("login");throw new Error("401")}
- if(!r.ok){var m="Fehler "+r.status;try{m=(await r.json()).detail||m}catch(e){}throw new Error(m)}
- return r.json()}
-function icon(g){return g.icon?'<img src="https://cdn.discordapp.com/icons/'+g.id+'/'+g.icon+'.png?size=64" alt="">':esc(g.name[0])}
-
-async function boot(){
- try{var me=await api("/api/me");$("uname").textContent=me.name;$("uav").textContent=me.name[0].toUpperCase();
-  await loadGuilds();go("servers")}catch(e){if(e.message!="401")toast(e.message,1)}}
-async function loadGuilds(){
- try{GUILDS=await api("/api/guilds")}catch(e){return toast(e.message,1)}
- $("srvGrid").innerHTML=GUILDS.length?GUILDS.map(function(s){
-  return '<div class="srv"><div class="h"><div class="ic">'+icon(s)+'</div><b>'+esc(s.name)+'</b></div>'+
-  (s.bot?'<button class="btn" onclick="pick(\''+s.id+'\')">Dashboard öffnen</button>':'<a class="btn sec" target="_blank" href="/invite/'+s.id+'">Bot einladen</a>')+'</div>'}).join(""):
-  '<p class="sub">Keine Server gefunden, auf denen du „Server verwalten“ darfst.</p>'}
-async function pick(id){
- cur=GUILDS.filter(function(s){return s.id==id})[0];
- try{st=await api("/api/guilds/"+id+"/settings");CH=await api("/api/guilds/"+id+"/channels").catch(function(){return []})}catch(e){return toast(e.message,1)}
- $("curName").textContent=cur.name;$("curIc").innerHTML=icon(cur);active="home";nav();render();dirty(false);go("dash")}
+function go(s){["login","servers","dash"].forEach(function(x){$(x).classList.add("hide")});$(s).classList.remove("hide");
+ if(s=="dash")$(s).style.display="grid";window.scrollTo(0,0)}
+function init(){$("srvGrid").innerHTML=SERVERS.map(function(s){
+ return '<div class="srv"><div class="h"><div class="ic">'+s.name[0]+'</div><div><b>'+s.name+'</b><br><small>'+s.members+' Mitglieder</small></div></div>'+
+ (s.bot?'<button class="btn" onclick="pick(\''+s.id+'\')">Dashboard öffnen</button>':'<button class="btn sec" onclick="alert(\'Hier öffnet sich die Discord-Einladung für Nexora.\')">Bot einladen</button>')+'</div>'}).join("")}
+function defaults(){var o={};MODS.forEach(function(m){if(!m.id||m.id=="home"||m.id=="data")return;o[m.id+".on"]=true;
+ (m.f||[]).forEach(function(f){o[f[0]]=f[4]});(m.c||[]).forEach(function(c){o["c."+c]=true})});return o}
+function pick(id){cur=SERVERS.filter(function(s){return s.id==id})[0];st=defaults();
+ try{var r=localStorage.getItem("nx"+id);if(r)Object.assign(st,JSON.parse(r))}catch(e){}
+ $("curName").textContent=cur.name;$("curIc").textContent=cur.name[0];dirty=false;active="home";nav();render();go("dash")}
 function nav(){$("nav").innerHTML=MODS.map(function(m){return '<button class="'+(m.id==active?"on":"")+'" onclick="show(\''+m.id+'\')">'+m.ic+' '+m.t+'</button>'}).join("")}
 function show(id){active=id;nav();render();$("side").classList.remove("open");window.scrollTo(0,0)}
-function dirty(d){$("dirtyTxt").textContent=d?"⚠️ Ungespeicherte Änderungen":"Keine ungespeicherten Änderungen"}
-function setv(k,v){st[k]=v;dirty(true);if(k=="logch")render()}
+function setv(k,v){st[k]=v;dirty=true;$("dirty").textContent="⚠️ Ungespeicherte Änderungen";if(k=="logch")render()}
 function sw(k){return '<label class="sw"><input type="checkbox" '+(st[k]?"checked":"")+' onchange="setv(\''+k+'\',this.checked)"><i></i></label>'}
 function field(f){var k=f[0],t=f[3],v=st[k];
  if(t=="tog")return sw(k);
- if(t=="num")return '<input type="number" min="0" value="'+esc(v)+'" onchange="setv(\''+k+'\',+this.value)">';
- if(t=="sel")return '<select onchange="setv(\''+k+'\',this.value)"><option value="">– nicht gesetzt –</option>'+CH.map(function(c){return '<option value="'+c.id+'" '+(c.id==v?"selected":"")+'>#'+esc(c.name)+'</option>'}).join("")+'</select>';
- return '<input type="text" maxlength="50" value="'+esc(v)+'" onchange="setv(\''+k+'\',this.value)">'}
-function render(){var m=MODS.filter(function(x){return x.id==active})[0],h="",logOk=!!st.logch;
+ if(t=="num")return '<input type="number" min="0" value="'+v+'" onchange="setv(\''+k+'\',+this.value)">';
+ if(t=="sel")return '<select onchange="setv(\''+k+'\',this.value)">'+f[4].map(function(o){return '<option '+(o==v?"selected":"")+'>'+o+'</option>'}).join("")+'</select>';
+ return '<input type="text" value="'+v+'" onchange="setv(\''+k+'\',this.value)">'}
+function render(){var m=MODS.filter(function(x){return x.id==active})[0],h="";
+ var logOk=st.logch&&st.logch.indexOf("nicht")<0;
  if(m.id=="home"){
-  var ks=Object.keys(st);
-  h='<h2>Übersicht</h2><p class="sub">Alles für <b>'+esc(cur.name)+'</b> auf einen Blick.</p>'+
-  (logOk?'':'<div class="warn">⚠️ Es ist noch kein Log-Kanal gesetzt – Nexora ist auf diesem Server gesperrt. <a href="#" onclick="show(\'log\');return false">Jetzt festlegen</a></div>')+
-  '<div class="stats"><div class="stat"><b>'+ks.filter(function(k){return /\.on$/.test(k)&&st[k]}).length+'</b><small>aktive Module</small></div><div class="stat"><b>'+
-  ks.filter(function(k){return k.indexOf("c.")==0&&st[k]}).length+'</b><small>aktive Befehle</small></div><div class="stat"><b>'+(logOk?"Aktiv":"Gesperrt")+'</b><small>Bot-Status</small></div></div>'+
+  h='<h2>Übersicht</h2><p class="sub">Alles für <b>'+cur.name+'</b> auf einen Blick.</p>'+
+  (logOk?'':'<div class="warn">⚠️ Es ist noch kein Log-Kanal gesetzt – Nexora ist auf diesem Server gesperrt. <a href="#" onclick="show(\'log\');return false" style="color:var(--p)">Jetzt festlegen</a></div>')+
+  '<div class="stats"><div class="stat"><b>'+cur.members+'</b><small>Mitglieder</small></div><div class="stat"><b>'+
+  Object.keys(st).filter(function(k){return k.indexOf("c.")==0&&st[k]}).length+'</b><small>aktive Befehle</small></div><div class="stat"><b>'+
+  (logOk?"Aktiv":"Gesperrt")+'</b><small>Bot-Status</small></div></div>'+
   '<div class="card"><h3>Module</h3><p>Schalte komplette Bereiche für diesen Server an oder aus.</p>'+
-  MODS.filter(function(x){return ["eco","task","shop","mod","admin"].indexOf(x.id)>=0}).map(function(x){return '<div class="row"><label>'+x.ic+' '+x.t+'<span>'+x.d+'</span></label>'+sw(x.id+".on")+'</div>'}).join("")+'</div>'}
+  MODS.filter(function(x){return x.d&&x.id!="data"&&x.id!="log"}).map(function(x){return '<div class="row"><label>'+x.ic+' '+x.t+'<span>'+x.d+'</span></label>'+sw(x.id+".on")+'</div>'}).join("")+'</div>'}
  else if(m.id=="data"){
-  h='<h2>'+m.t+'</h2><p class="sub">'+m.d+'</p><div class="card"><h3>Sicherungen</h3><p>Tägliche automatische Backups. Wartungen siehst du im Log-Kanal.</p></div>'+
-  '<div class="card"><h3>Economy-Daten löschen</h3><p>Nutzer können ihre Daten jederzeit selbst mit <code>/daten-loeschen</code> entfernen.</p></div>'+
-  '<div class="card"><h3>Rechtliches</h3><p><a href="#">Nutzungsbedingungen</a> · <a href="#">Datenschutzerklärung</a></p></div>'}
+  h='<h2>'+m.t+'</h2><p class="sub">'+m.d+'</p><div class="card"><h3>Sicherungen</h3><p>Tägliche automatische Backups. Wartungen siehst du im Log-Kanal.</p>'+
+  '<div class="row"><label>Letzte Sicherung<span>heute, 03:00 Uhr</span></label><span class="tag">OK</span></div></div>'+
+  '<div class="card"><h3>Economy-Daten löschen</h3><p>Entfernt alle Kontostände, Inventare und Aufgaben dieses Servers. Nutzer können das auch selbst per <code>/daten-loeschen</code>.</p><button class="danger" onclick="if(confirm(\'Wirklich alle Economy-Daten löschen?\'))toast(\'Demo: gelöscht\')">Alle Daten löschen</button></div>'+
+  '<div class="card"><h3>Rechtliches</h3><p><a href="#" style="color:var(--p)">Nutzungsbedingungen</a> · <a href="#" style="color:var(--p)">Datenschutzerklärung</a></p></div>'}
  else{
-  h='<h2>'+m.ic+' '+m.t+(m.id=="log"?'<span class="tag">Pflicht</span>':'')+'</h2><p class="sub">'+m.d+'</p>';
+  h='<h2>'+m.ic+' '+m.t+(m.id!="log"?'':'<span class="tag">Pflicht</span>')+'</h2><p class="sub">'+m.d+'</p>';
   if(m.id!="log")h+='<div class="card"><div class="row"><label>Modul aktiviert<span>Deaktiviert = alle Befehle hier sind aus</span></label>'+sw(m.id+".on")+'</div></div>';
   if(m.f&&m.f.length)h+='<div class="card"><h3>Einstellungen</h3><p> </p>'+m.f.map(function(f){return '<div class="row"><label>'+f[1]+(f[2]?'<span>'+f[2]+'</span>':'')+'</label>'+field(f)+'</div>'}).join("")+'</div>';
-  if(m.c)h+='<div class="card"><h3>Befehle</h3><p>Einzelne Befehle für diesen Server ein- oder ausschalten.</p>'+m.c.map(function(c){return '<div class="row"><label><code>/'+c+'</code></label>'+sw("c."+c)+'</div>'}).join("")+'</div>'}
+  if(m.c)h+='<div class="card"><h3>Befehle</h3><p>Einzelne Befehle für diesen Server ein- oder ausschalten.</p>'+m.c.map(function(c){return '<div class="row"><label><code>/'+c+'</code></label>'+sw("c."+c)+'</div>'}).join("")+'</div>';
+  if(m.id=="eco")h+='<div class="card"><h3>Bald verfügbar</h3><p>🌍 Server Quests und weitere Economy-Features.</p></div>'}
  $("view").innerHTML=h}
-async function save(){
- try{st=await api("/api/guilds/"+cur.id+"/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(st)});
-  dirty(false);render();toast("✓ Gespeichert für "+cur.name)}catch(e){toast(e.message,1)}}
-boot();
+function save(){try{localStorage.setItem("nx"+cur.id,JSON.stringify(st))}catch(e){}
+ dirty=false;$("dirty").textContent="Keine ungespeicherten Änderungen";toast("✓ Gespeichert für "+cur.name)}
+function toast(t){var e=document.createElement("div");e.className="toast";e.textContent=t;document.body.appendChild(e);setTimeout(function(){e.remove()},2200)}
+init();
 </script>
 </body>
 </html>
