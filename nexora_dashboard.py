@@ -4,7 +4,7 @@ Einbauen (eine Zeile, z. B. in setup_hook):
     await bot.load_extension("nexora_dashboard")
 
 Umgebungsvariablen beim Bot:
-    DASHBOARD_URL = https://DEINE-SEITE.pages.dev
+    DASHBOARD_URL = https://nexora-sio.pages.dev/
     BOT_API_KEY   = derselbe Wert wie bei Cloudflare
 
 Was die Datei macht:
