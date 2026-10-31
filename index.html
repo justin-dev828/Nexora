@@ -1270,51 +1270,103 @@
         document.addEventListener("pointermove", function (e) {var t = e.target.closest && e.target.closest(".ft,.sv,.stat,.card"); if (t) {var r = t.getBoundingClientRect(); t.style.setProperty("--mx", (e.clientX - r.left) + "px"); t.style.setProperty("--my", (e.clientY - r.top) + "px")} var c = $("cg"); if (c) c.style.transform = "translate(" + (e.clientX - 150) + "px," + (e.clientY - 150) + "px)"});
         document.addEventListener("click", function (e) {var b = e.target.closest && e.target.closest(".bt,.cp"); if (!b) return; var r = b.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2, x = document.createElement("span"); x.className = "rp"; x.style.cssText = "width:" + d + "px;height:" + d + "px;left:" + (e.clientX - r.left - d / 2) + "px;top:" + (e.clientY - r.top - d / 2) + "px"; b.appendChild(x); setTimeout(function () {x.remove()}, 600)});
         setInterval(function () {if (cur && active == "home" && !$("dash").classList.contains("hide")) loadStats()}, 30000);
-                /* ===== Nexora Erweiterung: Casino, Support-PIN, Team-Rollen ===== */
+          /* ===== Nexora Erweiterung: Casino, Support-PIN, Team-Zugang ===== */
         (function () {
-            var ME = {}, tm;
-            function put(id, c) {MODS.forEach(function (m) {if (m.id == id) m.c = (m.c || []).concat(c)})}
-            put("eco", ["woche", "profil", "erfolge"]); put("task", ["serverquest", "spenden"]);
-            put("shop", ["verkaufen", "schenken", "shop-bearbeiten", "shop-entfernen"]);
+            "use strict";
+            if (window.NXP) return;
+            var ME = {}, timer = null;
+
+            /* 1) Casino & Extras + zusätzliche Befehle */
+            function addCmds(id, cmds) {MODS.forEach(function (m) {if (m.id == id) m.c = (m.c || []).concat(cmds)})}
+            addCmds("eco", ["woche", "profil", "erfolge"]);
+            addCmds("task", ["serverquest", "spenden"]);
+            addCmds("shop", ["verkaufen", "schenken", "shop-bearbeiten", "shop-entfernen"]);
             MODS.splice(MODS.length - 2, 0,
                 {
                     id: "casino", ic: "🎰", t: "Casino & Extras", d: "Casino, Stehlen, Zinsen, Quests und Item-Rückkauf.",
-                    f: [["casino_max", "Casino: Höchsteinsatz", "", "num", 1000], ["steal_on", "Stehlen erlauben", "Mitglieder können sich bestehlen", "tog", false],
-                    ["interest", "Bankzinsen pro Tag (%)", "0 bis 10", "num", 1], ["sellpct", "Item-Rückkauf (%)", "0 = Verkauf aus", "num", 50],
-                    ["qon", "Tägliche Aufgaben", "", "tog", true], ["sqon", "Server-Quests", "", "tog", true]], c: ["casino", "stehlen"]
+                    f: [["casino_max", "Casino: Höchsteinsatz", "", "num", 1000],
+                    ["steal_on", "Stehlen erlauben", "Mitglieder können sich bestehlen", "tog", false],
+                    ["interest", "Bankzinsen pro Tag (%)", "0 bis 10", "num", 1],
+                    ["sellpct", "Item-Rückkauf (%)", "0 = Verkauf aus", "num", 50],
+                    ["qon", "Tägliche Aufgaben", "", "tog", true],
+                    ["sqon", "Server-Quests", "", "tog", true]],
+                    c: ["casino", "stehlen"]
                 },
                 {id: "support", ic: "🔑", t: "Support & Team", d: "Dein Support-PIN und Werkzeuge für das Nexora-Team."});
-            var r0 = render, s0 = save;
-            render = function (na) {if (active != "support") return r0(na); view()};
-            save = function () {if (ME.edit === false) return toast("Nur Ansicht: deine Team-Rolle darf nicht bearbeiten"); return s0()};
-            function view() {
-                var v = $("view"); v.className = "scr";
-                v.innerHTML = '<button class="back bt s" onclick="show(\'home\')">‹ Übersicht</button><h2>🔑 Support &amp; Team</h2><p class="sub">Support-PIN weitergeben, damit dir das Nexora-Team helfen kann.</p>' +
-                    '<div class="card g"><h4>Dein Support-PIN</h4><p>Wechselt alle 5 Minuten. Das Team sieht nur deine Server, auf denen der Bot ist.</p><div class="chips"><span class="cp on" id="pn" style="font-size:22px;letter-spacing:4px">······</span><span class="cp" id="pl"></span></div></div><div id="tm"></div>';
-                pin(); team();
-            }
-            function pin() {
-                clearInterval(tm);
+
+            /* 4) Nur-Ansicht für Team-Rollen */
+            var render0 = render, save0 = save;
+            render = function (na) {return active == "support" ? supportView() : render0(na)};
+            save = function () {
+                if (ME.edit === false) {clean(); return toast("Nur Ansicht: deine Team-Rolle darf nicht bearbeiten")}
+                return save0();
+            };
+
+            /* 2) Support-PIN */
+            function loadPin() {
+                clearInterval(timer);
                 api("/api/pin").then(function (d) {
-                    var left = d.left; $("pn").textContent = d.pin;
-                    tm = setInterval(function () {if (!$("pl")) return clearInterval(tm); left--; if (left <= 0) return pin(); $("pl").textContent = "noch " + Math.floor(left / 60) + ":" + ("0" + left % 60).slice(-2)}, 1000);
-                }).catch(function (e) {toast(e.message)});
+                    var left = d.left;
+                    if (!$("pn")) return;
+                    $("pn").textContent = d.pin;
+                    timer = setInterval(function () {
+                        if (!$("pl")) return clearInterval(timer);
+                        left--;
+                        if (left <= 0) return loadPin();
+                        $("pl").textContent = "noch " + Math.floor(left / 60) + ":" + ("0" + (left % 60)).slice(-2);
+                    }, 1000);
+                }).catch(function (e) {if (e.message != "401") toast(e.message)});
             }
-            function team() {
-                if (!ME.role) return;
-                var h = '<div class="card g"><h4>Team-Zugang · Rolle: ' + esc(ME.role) + '</h4><p>' + (ME.sup ? 'Aktive Support-Sitzung für <b>' + esc(ME.sup) + '</b>.' : 'PIN eines Nutzers eingeben, um dessen Server zu verwalten.') + '</p><div class="row"><input type="text" id="pi" inputmode="numeric" maxlength="6" placeholder="6-stelliger PIN"><button class="bt" onclick="NXP.redeem()">Einlösen</button>' + (ME.sup ? '<button class="bt s" onclick="NXP.end()">Beenden</button>' : '') + '</div></div><div id="au"></div>';
-                $("tm").innerHTML = h;
-                if (ME.role == "owner" || ME.role == "admin") api("/api/audit").then(function (a) {
-                    $("au").innerHTML = '<div class="card g"><h4>Aktivität</h4>' + (a.map(function (x) {return '<div class="row"><label>' + esc(x.name) + ' (' + esc(x.role) + ')<span>' + esc(x.act) + (x.guild != "-" ? ' · Server ' + esc(x.guild) : '') + '</span></label><small>' + new Date(x.t).toLocaleString("de-DE") + '</small></div>'}).join("") || "<p>Noch nichts.</p>") + '</div>'
+
+            /* 3) Team-Zugang */
+            function teamCard(inputId) {
+                return '<h4>🔑 Team-Zugang · Rolle: ' + esc(ME.role) + '</h4><p>' +
+                    (ME.sup ? 'Aktive Support-Sitzung für <b>' + esc(ME.sup) + '</b>.' : 'PIN eines Nutzers eingeben, um dessen Server zu verwalten.') +
+                    '</p><div class="row"><input type="text" id="' + inputId + '" inputmode="numeric" maxlength="6" placeholder="6-stelliger PIN">' +
+                    '<button class="bt" onclick="NXP.redeem(\'' + inputId + '\')">Einlösen</button>' +
+                    (ME.sup ? '<button class="bt s" onclick="NXP.end()">Beenden</button>' : '') + '</div>';
+            }
+            function auditCard() {
+                api("/api/audit").then(function (a) {
+                    if (!$("au")) return;
+                    $("au").innerHTML = '<div class="card g"><h4>Aktivität</h4>' + (a.map(function (x) {
+                        return '<div class="row"><label>' + esc(x.name) + ' (' + esc(x.role) + ')<span>' + esc(x.act) +
+                            (x.guild != "-" ? ' · Server ' + esc(x.guild) : '') + '</span></label><small>' + new Date(x.t).toLocaleString("de-DE") + '</small></div>';
+                    }).join("") || "<p>Noch nichts.</p>") + '</div>';
                 }).catch(function () { });
             }
+            function supportView() {
+                var v = $("view"); v.className = "scr";
+                v.innerHTML = '<button class="back bt s" onclick="show(\'home\')">‹ Übersicht</button><h2>🔑 Support &amp; Team</h2>' +
+                    '<p class="sub">Support-PIN weitergeben, damit dir das Nexora-Team helfen kann.</p>' +
+                    '<div class="card g"><h4>Dein Support-PIN</h4><p>Wechselt alle 5 Minuten. Das Team sieht nur deine Server, auf denen der Bot ist.</p>' +
+                    '<div class="chips"><span class="cp on" id="pn" style="font-size:22px;letter-spacing:4px">······</span><span class="cp" id="pl"></span></div></div>' +
+                    (ME.role ? '<div class="card g">' + teamCard("pi") + '</div>' : '') + '<div id="au"></div>';
+                loadPin();
+                if (ME.role == "owner" || ME.role == "admin") auditCard();
+            }
+
             window.NXP = {
-                redeem: function () {api("/api/support", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({pin: $("pi").value})}).then(function () {toast("✓ Support-Sitzung gestartet"); location.reload()}).catch(function (e) {toast(e.message)})},
+                redeem: function (id) {
+                    var pin = ($(id).value || "").replace(/\D/g, "");
+                    if (pin.length != 6) return toast("Bitte den 6-stelligen PIN eingeben");
+                    api("/api/support", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({pin: pin})})
+                        .then(function () {toast("✓ Support-Sitzung gestartet"); setTimeout(function () {location.reload()}, 600)})
+                        .catch(function (e) {toast(e.message)});
+                },
                 end: function () {api("/api/support", {method: "DELETE"}).then(function () {location.reload()})}
             };
+
+            /* Start: Rolle laden, Team-Karte auf der Serverauswahl zeigen */
             fetch("/api/me").then(function (r) {return r.ok ? r.json() : {}}).then(function (m) {
-                ME = m; if (m.role) $("uname").textContent += " · " + m.role.toUpperCase(); if (m.sup) $("uname").textContent += " · Support für " + m.sup;
-            });
+                ME = m || {};
+                if (!ME.role) return;
+                $("uname").textContent += " · " + ME.role.toUpperCase() + (ME.sup ? " · Support für " + ME.sup : "");
+                var c = document.createElement("div");
+                c.className = "card g"; c.style.cssText = "max-width:560px;margin:18px auto 0";
+                c.innerHTML = teamCard("pi2");
+                $("srvGrid").after(c);
+            }).catch(function () { });
         })();
         boot();
     </script>
