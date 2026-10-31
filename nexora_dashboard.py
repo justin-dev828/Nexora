@@ -73,6 +73,8 @@ _loaded = False         # wurde schon einmal alles geladen?
 _last_write = 0.0       # Zeitpunkt der letzten eigenen Änderung
 _last_warn = ""
 _herz_ok = None
+_last_status = None   # HTTP-Status der letzten Anfrage (None = nicht erreichbar)
+_liste_ok = None      # True/False: gibt es im Backend die Sammel-Route /api/bot/settings?
 _orig_aendern = None  # unveränderte db.einstellungen_aendern (verhindert Rückspiegelung)
 _tasks: set = set()
 
@@ -98,9 +100,12 @@ async def _http():
 
 async def _req(method: str, path: str, **kw):
     """Anfrage an das Dashboard. Gibt die Antwort (JSON) zurück oder None bei Fehlern."""
+    global _last_status
+    _last_status = None
     try:
         s = await _http()
         async with s.request(method, URL + path, headers=_head, **kw) as r:
+            _last_status = r.status
             if r.status == 200:
                 return await r.json()
             _warn(f"{method} {path}: HTTP {r.status}"
@@ -309,28 +314,58 @@ async def _warten_herzschlag():
 
 
 _sync_gemeldet = False
+SYNC_STANDARD = 10  # Sekunden zwischen zwei Abgleichen (per Variable DASHBOARD_SYNC_SEKUNDEN änderbar, mindestens 5)
 
 
-@tasks.loop(seconds=60)
-async def _sync():
-    """Holt die Einstellungen jedes Servers einzeln (/api/bot/settings/<id>) und meldet Änderungen.
-
-    Eine Sammel-Route (/api/bot/settings) gibt es im Dashboard-Backend nicht, deshalb pro Server.
-    60 Sek. Takt, damit das Anfrage-Limit von Cloudflare Pages nicht ausgereizt wird.
-    """
-    for g in list(_bot.guilds):
-        t0 = time.time()
-        cfg = await _req("GET", f"/api/bot/settings/{g.id}")
-        if cfg is None:
-            return  # Dashboard nicht erreichbar: nicht jeden Server einzeln versuchen
-        if t0 >= _last_write:  # veraltete Antwort nicht über eigene Änderung legen
-            # Beim ersten Laden eines Servers nichts melden (sonst würden Dashboard-Standardwerte die Datenbank überschreiben)
-            await _apply(g.id, cfg, notify=g.id in _cache)
-        await asyncio.sleep(0.25)
+def _sync_meldung() -> None:
     global _sync_gemeldet
     if not _sync_gemeldet:
         _sync_gemeldet = True
         print(f"[Nexora-Dashboard] Einstellungen von {len(_cache)} Server(n) geladen – Befehls-Sperren sind aktiv")
+
+
+@tasks.loop(seconds=SYNC_STANDARD)
+async def _sync():
+    """Holt die Einstellungen aller Server mit EINER Anfrage (/api/bot/settings) und meldet Änderungen.
+
+    Fehlt diese Sammel-Route im Backend (alte _middleware.js), wird stattdessen jeder Server einzeln
+    abgefragt und der Takt auf 60 Sekunden verlängert (Anfrage-Limit von Cloudflare Pages).
+    """
+    global _defaults, _liste_ok
+    t0 = time.time()
+    if _liste_ok is not False:
+        daten = await _req("GET", "/api/bot/settings")
+        if isinstance(daten, dict) and isinstance(daten.get("guilds"), dict):
+            _liste_ok = True
+            if t0 < _last_write:  # veraltete Antwort nicht über eigene Änderung legen
+                return
+            _defaults = daten.get("defaults", {})
+            for gid, cfg in daten["guilds"].items():
+                await _apply(int(gid), cfg, notify=int(gid) in _cache)
+            for g in list(_bot.guilds):  # Server ohne gespeicherte Dashboard-Einstellungen: Standardwerte
+                if g.id not in _cache:
+                    _cache[g.id] = dict(_defaults)
+                    _stamp[g.id] = time.time()
+            _sync_meldung()
+            return
+        if _last_status in (401, 404):
+            _liste_ok = False
+            _sync.change_interval(seconds=60)
+            print("[Nexora-Dashboard] Sammel-Route fehlt im Backend – Einzelabfrage alle 60 Sek. "
+                  "(neue _middleware.js bei Cloudflare veröffentlichen, dann gilt der 10-Sek.-Takt)")
+        else:
+            return  # Dashboard gerade nicht erreichbar: beim nächsten Takt erneut versuchen
+
+    # Ausweichlösung: jeder Server einzeln
+    for g in list(_bot.guilds):
+        t1 = time.time()
+        cfg = await _req("GET", f"/api/bot/settings/{g.id}")
+        if cfg is None:
+            return
+        if t1 >= _last_write:
+            await _apply(g.id, cfg, notify=g.id in _cache)
+        await asyncio.sleep(0.25)
+    _sync_meldung()
 
 
 @_sync.before_loop
@@ -358,6 +393,11 @@ def starten(bot: discord.Client, db, log_kanal_setzen: Optional[Callable[[int, i
         "User-Agent": f"NexoraBot/1.0 (+{URL})",  # ohne User-Agent blockt Cloudflare manchmal mit 403
     }
     _bot, _db, _log_cb = bot, db, log_kanal_setzen
+    try:
+        takt = max(5, int(os.environ.get("DASHBOARD_SYNC_SEKUNDEN", SYNC_STANDARD)))
+    except ValueError:
+        takt = SYNC_STANDARD
+    _sync.change_interval(seconds=takt)
     if not _herzschlag.is_running():
         _herzschlag.start()
     if not _sync.is_running():
@@ -431,7 +471,7 @@ def installieren(g: dict) -> None:
     global _orig_aendern
     bot, db = g["bot"], g["db"]
     _status_befehl_registrieren(bot)  # /dashboard zum Fehlersuchen
-    print("[Nexora-Dashboard] Anbindung eingebaut (Befehls-Sperren und /dashboard) – Version 4")
+    print("[Nexora-Dashboard] Anbindung eingebaut (Befehls-Sperren und /dashboard) – Version 5 (Abgleich alle 10 Sek.)")
 
     # 1. Slash-Befehle: Dashboard-Sperre nach der normalen Zugriffsprüfung
     orig_pruefe = g["besitzer_pruefe_zugriff"]
