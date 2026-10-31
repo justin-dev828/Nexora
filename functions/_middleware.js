@@ -221,6 +221,13 @@ export async function onRequest(context) {
     const bs = p.match(/^\/api\/bot\/settings\/(\d+)$/);
     if (bs) {
       if (!(await isBot(req))) return json({ detail: "Nicht erlaubt" }, 403);
+      if (m === "PUT") { // Bot -> Dashboard: Einstellungen aus Discord (/einstellungen, /logkanal) speichern
+        const body = await req.json();
+        const data = { ...(await load(bs[1])), ...clean(body && typeof body === "object" ? body : {}) };
+        if (data.workmin > data.workmax) return json({ detail: "Arbeiten: Minimum darf nicht größer als Maximum sein" }, 400);
+        await saveSettings(bs[1], data);
+        return json(data);
+      }
       return json(await load(bs[1]));
     }
 
