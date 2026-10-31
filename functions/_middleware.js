@@ -233,6 +233,13 @@ export async function onRequest(context) {
         ping: n(b.ping), commands: n(b.commands), started: n(b.started) });
       return json({ ok: true });
     }
+    if (p === "/api/bot/settings" && m === "GET") { // alle Server auf einmal (eine Anfrage statt eine pro Server)
+      if (!(await isBot(req))) return json({ detail: "Nicht erlaubt" }, 403);
+      const rows = await E.DB.prepare("SELECT guild_id, data FROM settings").all();
+      const guilds = {};
+      for (const r of rows.results || []) guilds[r.guild_id] = { ...DEFAULTS, ...JSON.parse(r.data) };
+      return json({ defaults: DEFAULTS, guilds });
+    }
     const bs = p.match(/^\/api\/bot\/settings\/(\d+)$/);
     if (bs) {
       if (!(await isBot(req))) return json({ detail: "Nicht erlaubt" }, 403);
