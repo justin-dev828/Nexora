@@ -32,7 +32,8 @@ START = time.time()
 # Befehlsname -> Modul (muss zu den Befehlen im Dashboard passen)
 MODULES = {
     "eco": ["belohnung", "arbeiten", "kontostand", "einzahlen", "abheben", "geben", "rangliste",
-            "woche", "profil", "erfolge", "casino", "stehlen"],
+            "woche", "profil", "erfolge"],
+    "casino": ["casino", "stehlen"],
     "task": ["aufgaben", "aufgaben-abholen", "serverquest", "spenden"],
     "shop": ["shop", "kaufen", "inventar", "benutzen", "verkaufen", "schenken",
              "shop-hinzufuegen", "shop-bearbeiten", "shop-entfernen"],
@@ -48,7 +49,11 @@ ZAHLEN = {
     "workmin": ("arbeiten_min", 1, 1_000_000),
     "workmax": ("arbeiten_max", 1, 1_000_000),
     "workcd": ("arbeiten_cooldown_min", 1, 1440),
+    "casino_max": ("casino_max", 1, 1_000_000),
+    "interest": ("zins_prozent", 0, 10),
+    "sellpct": ("verkauf_prozent", 0, 100),
 }
+BOOLS = {"casino_on": "casino_aktiv", "steal_on": "stehlen_aktiv", "qon": "quests_aktiv", "sqon": "sq_aktiv"}
 TEXTE = {
     "cur": ("waehrung_name", 30),
     "cursym": ("waehrung_emoji", 60),
@@ -246,6 +251,9 @@ async def _uebernehmen(guild_id: int, changes: dict, cfg: dict) -> None:
         text = str(changes.get(key, "")).strip()
         if text:
             felder[spalte] = discord.utils.escape_mentions(text)[:maxlaenge]
+    for key, spalte in BOOLS.items():
+        if isinstance(changes.get(key), bool):
+            felder[spalte] = int(changes[key])
     logch = str(changes.get("logch", "")).strip()
     if logch.isdigit():
         felder["log_kanal_id"] = int(logch)
@@ -279,6 +287,10 @@ async def spiegeln(guild_id: int, s: Optional[dict] = None) -> None:
             "workcd": s["arbeiten_cooldown_min"],
             "cur": s["waehrung_name"],
             "cursym": s["waehrung_emoji"],
+            "casino_max": s["casino_max"],
+            "interest": s["zins_prozent"],
+            "sellpct": s["verkauf_prozent"],
+            **{k: bool(s[c]) for k, c in BOOLS.items()},
         }
         if s["log_kanal_id"]:
             daten["logch"] = str(s["log_kanal_id"])
@@ -414,7 +426,7 @@ async def beenden() -> None:
 # ---------------------------------------------------------------------------------------------
 # Alles auf einmal einbauen (eine Zeile in bot.py)
 # ---------------------------------------------------------------------------------------------
-SPIEGEL_FELDER = {spalte for spalte, *_ in ZAHLEN.values()} | {spalte for spalte, _ in TEXTE.values()} | {"log_kanal_id"}
+SPIEGEL_FELDER = {spalte for spalte, *_ in ZAHLEN.values()} | {spalte for spalte, _ in TEXTE.values()} | set(BOOLS.values()) | {"log_kanal_id"}
 
 
 def _status_befehl_registrieren(bot) -> None:
