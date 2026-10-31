@@ -85,20 +85,35 @@ const dc = (path, auth, init = {}) =>
   fetch(API + path, { ...init, headers: { authorization: auth, "user-agent": UA, ...(init.headers || {}) } });
 const BOT = () => `Bot ${E.BOT_TOKEN}`;
 
+const memo = new Map(); // kurzer Zwischenspeicher, damit Discord nicht bei jedem Klick abgefragt wird (Rate-Limit)
+async function cached(k, ttl, fn) {
+  const h = memo.get(k);
+  if (h && Date.now() - h.t < ttl) return h.v;
+  const v = await fn();
+  if (v) {
+    memo.set(k, { t: Date.now(), v });
+    if (memo.size > 200) memo.delete(memo.keys().next().value);
+  }
+  return v;
+}
 async function userGuilds(s) {
-  const r = await dc("/users/@me/guilds", `Bearer ${s.token}`);
-  if (r.status === 401) return null;
-  if (!r.ok) throw new Error("discord " + r.status);
-  return r.json();
+  return cached("g:" + s.uid, 20000, async () => {
+    const r = await dc("/users/@me/guilds", `Bearer ${s.token}`);
+    if (r.status === 401) return null;
+    if (!r.ok) throw new Error("discord " + r.status);
+    return r.json();
+  });
 }
 const canManage = (g) => {
   const p = BigInt(g.permissions);
   return !!g.owner || (p & 0x8n) !== 0n || (p & 0x20n) !== 0n;
 };
 async function botIds() {
-  const r = await dc("/users/@me/guilds?limit=200", BOT());
-  if (!r.ok) throw new Error("bot " + r.status);
-  return new Set((await r.json()).map((g) => g.id));
+  return cached("bot", 20000, async () => {
+    const r = await dc("/users/@me/guilds?limit=200", BOT());
+    if (!r.ok) throw new Error("bot " + r.status);
+    return new Set((await r.json()).map((g) => g.id));
+  });
 }
 async function access(s, id) {
   const gs = await userGuilds(s);
@@ -272,6 +287,6 @@ export async function onRequest(context) {
     return json({ detail: "Nicht gefunden" }, 404);
   } catch (e) {
     console.error(e);
-    return json({ detail: "Serverfehler" }, 500);
+    return json({ detail: "Serverfehler: " + String((e && e.message) || e).slice(0, 120) }, 500);
   }
 }
