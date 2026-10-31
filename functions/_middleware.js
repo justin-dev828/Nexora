@@ -12,6 +12,8 @@ const MODULES = {
   task: ["aufgaben", "aufgaben-abholen", "serverquest", "spenden"],
   shop: ["shop", "kaufen", "inventar", "benutzen", "verkaufen", "schenken", "shop-hinzufuegen", "shop-bearbeiten", "shop-entfernen"],
   casino: ["casino", "stehlen"],
+  panel: ["panel"],
+  info: ["ping", "wuerfeln", "serverinfo", "nutzerinfo", "avatar"],
   mod: ["kick", "ban", "unban", "mute", "unmute", "warn", "unwarn", "warnings", "clear"],
   admin: ["einstellungen", "geld-hinzufuegen", "geld-entfernen"],
   log: ["logkanal"],
@@ -183,6 +185,8 @@ const init = () => (ready ??= E.DB.batch([
   E.DB.prepare("CREATE TABLE IF NOT EXISTS stats (k TEXT PRIMARY KEY, v TEXT NOT NULL)"),
   E.DB.prepare("CREATE TABLE IF NOT EXISTS pins (uid TEXT PRIMARY KEY, pin TEXT, exp INTEGER, name TEXT, guilds TEXT)"),
   E.DB.prepare("CREATE TABLE IF NOT EXISTS audit (t INTEGER, uid TEXT, name TEXT, role TEXT, guild TEXT, act TEXT)"),
+  E.DB.prepare("CREATE TABLE IF NOT EXISTS logs (guild TEXT, t INTEGER, lvl TEXT, msg TEXT)"),
+  E.DB.prepare("CREATE TABLE IF NOT EXISTS usage (guild TEXT, cmd TEXT, n INTEGER, PRIMARY KEY (guild, cmd))"),
 ]).catch((e) => { ready = undefined; throw e; }));
 const load = async (id) => {
   const row = await E.DB.prepare("SELECT data FROM settings WHERE guild_id = ?").bind(id).first();
@@ -268,6 +272,18 @@ export async function onRequest(context) {
       for (const r of rows.results || []) guilds[r.guild_id] = { ...DEFAULTS, ...JSON.parse(r.data) };
       return json({ defaults: DEFAULTS, guilds });
     }
+    if (p === "/api/bot/events" && m === "POST") { // Bot -> Dashboard: Fehler-Konsole und Befehls-Tracker
+      if (!(await isBot(req))) return json({ detail: "Nicht erlaubt" }, 403);
+      const b = await req.json().catch(() => ({})), st = [];
+      for (const l of (b.logs || []).slice(0, 200)) if (/^\d+$/.test(String(l.g)))
+        st.push(E.DB.prepare("INSERT INTO logs (guild,t,lvl,msg) VALUES (?,?,?,?)").bind(String(l.g), Number(l.t) || Date.now(), String(l.l).slice(0, 8), String(l.m).slice(0, 300)));
+      for (const [g, cmds] of Object.entries(b.usage || {})) if (/^\d+$/.test(g))
+        for (const [c, n] of Object.entries(cmds).slice(0, 80))
+          st.push(E.DB.prepare("INSERT INTO usage (guild,cmd,n) VALUES (?,?,?) ON CONFLICT(guild,cmd) DO UPDATE SET n = n + excluded.n").bind(g, String(c).slice(0, 40), Math.max(0, Number(n) || 0)));
+      st.push(E.DB.prepare("DELETE FROM logs WHERE t < ?").bind(Date.now() - 7 * 864e5));
+      await E.DB.batch(st);
+      return json({ ok: true });
+    }
     const bs = p.match(/^\/api\/bot\/settings\/(\d+)$/);
     if (bs) {
       if (!(await isBot(req))) return json({ detail: "Nicht erlaubt" }, 403);
@@ -331,10 +347,15 @@ export async function onRequest(context) {
       });
       return go(`https://discord.com/oauth2/authorize?${q}`);
     }
-    const gm = p.match(/^\/api\/guilds\/(\d+)\/(settings|channels)$/);
+    const gm = p.match(/^\/api\/guilds\/(\d+)\/(settings|channels|usage|console)$/);
     if (gm) {
       const [, id, what] = gm;
       const a = await access(s, id, rl); if (a.err) return a.err;
+      if (what === "usage") return json((await E.DB.prepare("SELECT cmd, n FROM usage WHERE guild = ? ORDER BY n DESC LIMIT 20").bind(id).all()).results || []);
+      if (what === "console") { // nur mit Support-PIN (oder als Besitzer)
+        if (!a.via) return json({ detail: "Die Konsole ist nur mit einem Support-PIN sichtbar" }, 403);
+        return json((await E.DB.prepare("SELECT t, lvl, msg FROM logs WHERE guild = ? ORDER BY t DESC LIMIT 100").bind(id).all()).results || []);
+      }
       if (what === "channels") {
         const r = await dc(`/guilds/${id}/channels`, BOT());
         if (!r.ok) return json([]);
