@@ -34,6 +34,8 @@ MODULES = {
     "eco": ["belohnung", "arbeiten", "kontostand", "einzahlen", "abheben", "geben", "rangliste",
             "woche", "profil", "erfolge"],
     "casino": ["casino", "stehlen"],
+    "panel": ["panel"],
+    "info": ["ping", "wuerfeln", "serverinfo", "nutzerinfo", "avatar"],
     "task": ["aufgaben", "aufgaben-abholen", "serverquest", "spenden"],
     "shop": ["shop", "kaufen", "inventar", "benutzen", "verkaufen", "schenken",
              "shop-hinzufuegen", "shop-bearbeiten", "shop-entfernen"],
@@ -82,6 +84,53 @@ _last_status = None   # HTTP-Status der letzten Anfrage (None = nicht erreichbar
 _liste_ok = None      # True/False: gibt es im Backend die Sammel-Route /api/bot/settings?
 _orig_aendern = None  # unveränderte db.einstellungen_aendern (verhindert Rückspiegelung)
 _tasks: set = set()
+
+
+# ---------------------------------------------------------------------------------------------
+# Fehler-Konsole und Befehls-Tracker (werden gesammelt und mit dem Herzschlag ans Dashboard gesendet)
+# ---------------------------------------------------------------------------------------------
+_logs: list = []
+_usage: dict = {}   # guild_id -> {befehl: anzahl}
+
+
+def _log(gid, lvl: str, msg: str) -> None:
+    if gid is None:
+        return
+    _logs.append({"g": str(gid), "t": int(time.time() * 1000), "l": lvl, "m": str(msg)[:300]})
+    del _logs[:-300]  # nie mehr als 300 Einträge im Speicher
+
+
+def _count(gid, cmd: str) -> None:
+    if gid is not None:
+        u = _usage.setdefault(str(gid), {})
+        u[cmd] = u.get(cmd, 0) + 1
+
+
+async def _senden() -> None:
+    """Schickt neue Konsolen-Einträge und Zähler ans Dashboard. Bei Fehlern bleibt alles für den nächsten Versuch erhalten."""
+    if not _logs and not _usage:
+        return
+    logs, usage = list(_logs), {g: dict(c) for g, c in _usage.items()}
+    if await _req("POST", "/api/bot/events", json={"logs": logs[-200:], "usage": usage}) is None:
+        return
+    del _logs[:len(logs)]
+    for g, cmds in usage.items():
+        for c, n in cmds.items():
+            _usage[g][c] -= n
+            if _usage[g][c] <= 0:
+                del _usage[g][c]
+        if not _usage[g]:
+            del _usage[g]
+
+
+def _befehle_anzahl(bot) -> int:
+    """Zählt alle Slash-Befehle inklusive Unterbefehlen (global und pro Server)."""
+    def n(c):
+        return sum(n(x) for x in c.commands) if isinstance(c, app_commands.Group) else 1
+    alle = dict(getattr(bot.tree, "_global_commands", {}) or {})
+    for store in (getattr(bot.tree, "_guild_commands", {}) or {}).values():
+        alle.update(store)
+    return sum(n(c) for c in alle.values()) or len(bot.tree.get_commands())
 
 
 def aktiv() -> bool:
@@ -220,7 +269,9 @@ async def befehl_erlaubt(interaction: discord.Interaction, befehl: Optional[str]
            f"(Einstellungen geladen: {'ja' if gid in _cache else 'NEIN'}, "
            f"{modul}.on={cfg.get(modul + '.on', 'fehlt')}, c.{befehl}={cfg.get('c.' + befehl, 'fehlt')})")
     if erlaubt:
+        _count(gid, befehl)
         return True
+    _log(gid, "info", f"/{befehl} gesperrt (im Dashboard ausgeschaltet) – Nutzer {interaction.user.id}")
     if not interaction.response.is_done():
         await interaction.response.send_message(
             embed=discord.Embed(
@@ -310,7 +361,7 @@ async def _herzschlag():
         "servers": len(b.guilds),
         "users": sum(g.member_count or 0 for g in b.guilds),
         "ping": round(b.latency * 1000) if b.latency == b.latency else 0,
-        "commands": len(b.tree.get_commands()),
+        "commands": _befehle_anzahl(b),
         "started": START,
     }
     ok = await _req("POST", "/api/bot/heartbeat", json=daten) is not None
@@ -318,6 +369,8 @@ async def _herzschlag():
         print("[Nexora-Dashboard] Herzschlag OK" if ok else
               "[Nexora-Dashboard] Herzschlag fehlgeschlagen (Grund steht oben)")
     _herz_ok = ok
+    if ok:
+        await _senden()
 
 
 @_herzschlag.before_loop
@@ -507,6 +560,18 @@ def installieren(g: dict) -> None:
         await orig_knopf(interaction, befehl)
 
     g["_knopf"] = knopf
+
+    # 2b. Fehler-Konsole: Fehler von Slash-Befehlen mitschreiben (Antwort an den Nutzer bleibt unverändert)
+    orig_err = bot.tree.on_error
+
+    async def on_err(interaction, error):
+        orig = getattr(error, "original", error)
+        if not isinstance(error, app_commands.CheckFailure):
+            name = interaction.command.qualified_name if interaction.command else "?"
+            _log(interaction.guild_id, "error", f"/{name} (Nutzer {interaction.user.id}): {type(orig).__name__}: {orig}")
+        await orig_err(interaction, error)
+
+    bot.tree.on_error = on_err
 
     # 3. Start und Ende
     orig_setup = bot.setup_hook
