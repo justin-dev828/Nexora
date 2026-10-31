@@ -286,6 +286,9 @@ async def _warten_herzschlag():
     await _bot.wait_until_ready()
 
 
+_sync_gemeldet = False
+
+
 @tasks.loop(seconds=60)
 async def _sync():
     """Holt die Einstellungen jedes Servers einzeln (/api/bot/settings/<id>) und meldet Änderungen.
@@ -302,6 +305,10 @@ async def _sync():
             # Beim ersten Laden eines Servers nichts melden (sonst würden Dashboard-Standardwerte die Datenbank überschreiben)
             await _apply(g.id, cfg, notify=g.id in _cache)
         await asyncio.sleep(0.25)
+    global _sync_gemeldet
+    if not _sync_gemeldet:
+        _sync_gemeldet = True
+        print(f"[Nexora-Dashboard] Einstellungen von {len(_cache)} Server(n) geladen – Befehls-Sperren sind aktiv")
 
 
 @_sync.before_loop
@@ -348,6 +355,11 @@ async def beenden() -> None:
 SPIEGEL_FELDER = {spalte for spalte, *_ in ZAHLEN.values()} | {spalte for spalte, _ in TEXTE.values()} | {"log_kanal_id"}
 
 
+def _besitzer_ausnahme() -> bool:
+    """Standard: auch der Bot-Besitzer unterliegt den Dashboard-Sperren (DASHBOARD_BESITZER_AUSNAHME=1 = Besitzer ausgenommen)."""
+    return os.environ.get("DASHBOARD_BESITZER_AUSNAHME", "0").strip() == "1"
+
+
 def installieren(g: dict) -> None:
     """Baut die Anbindung in den Bot ein. In bot.py direkt vor `if not TOKEN:` aufrufen:
 
@@ -367,8 +379,8 @@ def installieren(g: dict) -> None:
     async def pruefe(interaction, befehl=None):
         if not await orig_pruefe(interaction):
             return False
-        if g["besitzer_ist_besitzer"](interaction.user.id):
-            return True  # der Besitzer ist ausgenommen
+        if _besitzer_ausnahme() and g["besitzer_ist_besitzer"](interaction.user.id):
+            return True
         return await befehl_erlaubt(interaction, befehl)
 
     g["besitzer_pruefe_zugriff"] = pruefe
@@ -377,7 +389,7 @@ def installieren(g: dict) -> None:
     orig_knopf = g["_knopf"]
 
     async def knopf(interaction, befehl):
-        if not g["besitzer_ist_besitzer"](interaction.user.id):
+        if not (_besitzer_ausnahme() and g["besitzer_ist_besitzer"](interaction.user.id)):
             if not await befehl_erlaubt(interaction, befehl):
                 return
         await orig_knopf(interaction, befehl)
