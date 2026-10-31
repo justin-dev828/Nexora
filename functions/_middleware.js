@@ -8,9 +8,10 @@ const BOT_PERMISSIONS = "1099780156422";
 const REQUIRED = ["CLIENT_ID", "CLIENT_SECRET", "BOT_TOKEN", "SESSION_SECRET", "BOT_API_KEY"];
 
 const MODULES = {
-  eco: ["belohnung", "arbeiten", "kontostand", "einzahlen", "abheben", "geben", "rangliste"],
-  task: ["aufgaben", "aufgaben-abholen"],
-  shop: ["shop", "kaufen", "inventar", "benutzen", "shop-hinzufuegen"],
+  eco: ["belohnung", "arbeiten", "kontostand", "einzahlen", "abheben", "geben", "rangliste", "woche", "profil", "erfolge"],
+  task: ["aufgaben", "aufgaben-abholen", "serverquest", "spenden"],
+  shop: ["shop", "kaufen", "inventar", "benutzen", "verkaufen", "schenken", "shop-hinzufuegen", "shop-bearbeiten", "shop-entfernen"],
+  casino: ["casino", "stehlen"],
   mod: ["kick", "ban", "unban", "mute", "unmute", "warn", "unwarn", "warnings", "clear"],
   admin: ["einstellungen", "geld-hinzufuegen", "geld-entfernen"],
   log: ["logkanal"],
@@ -22,6 +23,7 @@ const DEFAULTS = {
   tmsg: true, tvoice: true, treact: true, tshop: true,
   confirm: true, roles: true, items: true,
   modlog: true, warnmute: 3,
+  casino_on: true, casino_max: 1000, steal_on: false, interest: 1, sellpct: 50, qon: true, sqon: true,
 };
 for (const [m, cmds] of Object.entries(MODULES)) {
   if (m !== "log") DEFAULTS[`${m}.on`] = true;
@@ -115,7 +117,30 @@ async function botIds() {
     return new Set((await r.json()).map((g) => g.id));
   });
 }
-async function access(s, id) {
+// ---------- Team-Rollen (Discord-Rollen auf dem Nexora-Server) ----------
+const EDIT = new Set(["dev", "admin", "owner"]); // team, sup, mod = nur Ansicht
+async function roleOf(uid) {
+  if (E.OWNER_ID && uid === E.OWNER_ID) return "owner";
+  if (!E.NEXORA_GUILD_ID) return null;
+  const r = await cached("r:" + uid, 60000, async () => {
+    const x = await dc(`/guilds/${E.NEXORA_GUILD_ID}/members/${uid}`, BOT());
+    if (!x.ok) return "none";
+    const ids = (await x.json()).roles || []; let best = "none";
+    for (const k of ["team", "sup", "mod", "dev", "admin"]) { const id = E["ROLE_" + k.toUpperCase()]; if (id && ids.includes(id)) best = k; }
+    return best;
+  });
+  return r === "none" ? null : r;
+}
+const audit = (s, role, guild, act) => E.DB.prepare("INSERT INTO audit (t,uid,name,role,guild,act) VALUES (?,?,?,?,?,?)")
+  .bind(Date.now(), s.uid, s.name, role, guild, act).run();
+const botGuilds = () => cached("bg", 20000, async () => {
+  const r = await dc("/users/@me/guilds?limit=200", BOT()); if (!r.ok) throw new Error("bot " + r.status);
+  return (await r.json()).map((g) => ({ id: g.id, name: g.name, icon: g.icon, bot: true }));
+});
+
+async function access(s, id, rl) {
+  if (rl === "owner") return (await botIds()).has(id) ? { via: true } : { err: json({ detail: "Nexora ist nicht auf diesem Server" }, 404) };
+  if (s.sup && s.sup.exp > Date.now()) return s.sup.guilds.some((g) => g.id === id) ? { via: true } : { err: json({ detail: "Kein Zugriff" }, 403) };
   const gs = await userGuilds(s);
   if (!gs) return { err: json({ detail: "Sitzung abgelaufen" }, 401, [ck("nx_s", "", 0)]) };
   const g = gs.find((x) => x.id === id);
@@ -155,6 +180,8 @@ let ready;
 const init = () => (ready ??= E.DB.batch([
   E.DB.prepare("CREATE TABLE IF NOT EXISTS settings (guild_id TEXT PRIMARY KEY, data TEXT NOT NULL)"),
   E.DB.prepare("CREATE TABLE IF NOT EXISTS stats (k TEXT PRIMARY KEY, v TEXT NOT NULL)"),
+  E.DB.prepare("CREATE TABLE IF NOT EXISTS pins (uid TEXT PRIMARY KEY, pin TEXT, exp INTEGER, name TEXT, guilds TEXT)"),
+  E.DB.prepare("CREATE TABLE IF NOT EXISTS audit (t INTEGER, uid TEXT, name TEXT, role TEXT, guild TEXT, act TEXT)"),
 ]).catch((e) => { ready = undefined; throw e; }));
 const load = async (id) => {
   const row = await E.DB.prepare("SELECT data FROM settings WHERE guild_id = ?").bind(id).first();
@@ -256,13 +283,41 @@ export async function onRequest(context) {
     // Ab hier: nur eingeloggte Nutzer
     const s = await session(req);
     if (!s) return json({ detail: "Nicht eingeloggt" }, 401);
-    if (p === "/api/me") return json({ id: s.uid, name: s.name });
+    const rl = await roleOf(s.uid), sup = s.sup && s.sup.exp > Date.now() ? s.sup : null;
+    if (p === "/api/me") return json({ id: s.uid, name: s.name, role: rl, sup: sup && sup.name, edit: !(sup && !EDIT.has(rl)) });
+    if (p === "/api/pin") { // jeder Nutzer hat einen Support-PIN, der alle 5 Minuten wechselt
+      const gs = await userGuilds(s), bots = await botIds();
+      const mine = gs.filter(canManage).filter((g) => bots.has(g.id)).slice(0, 15).map((g) => ({ id: g.id, name: g.name.slice(0, 30) }));
+      let row = await E.DB.prepare("SELECT pin, exp FROM pins WHERE uid = ?").bind(s.uid).first();
+      if (!row || row.exp < Date.now()) {
+        row = { pin: String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, "0"), exp: Date.now() + 300000 };
+        await E.DB.prepare("INSERT INTO pins (uid,pin,exp,name,guilds) VALUES (?,?,?,?,?) ON CONFLICT(uid) DO UPDATE SET pin=excluded.pin, exp=excluded.exp, name=excluded.name, guilds=excluded.guilds")
+          .bind(s.uid, row.pin, row.exp, s.name, JSON.stringify(mine)).run();
+      }
+      return json({ pin: row.pin, left: Math.max(0, Math.floor((row.exp - Date.now()) / 1000)) });
+    }
+    if (p === "/api/support" && m === "POST") { // Team löst einen PIN ein
+      if (!rl) return json({ detail: "Nur für das Nexora-Team" }, 403);
+      const b = await req.json().catch(() => ({}));
+      const row = await E.DB.prepare("SELECT uid, name, guilds FROM pins WHERE pin = ? AND exp > ?").bind(String(b.pin || "").replace(/\D/g, ""), Date.now()).first();
+      if (!row) return json({ detail: "PIN ungültig oder abgelaufen" }, 404);
+      await audit(s, rl, "-", "Support-PIN von " + row.name + " eingelöst");
+      return json({ ok: true }, 200, [ck("nx_s", await seal({ ...s, sup: { uid: row.uid, name: row.name, guilds: JSON.parse(row.guilds), exp: Date.now() + 3600000 } }), 7 * 86400)]);
+    }
+    if (p === "/api/support" && m === "DELETE") { const { sup: _x, ...rest } = s; return json({ ok: true }, 200, [ck("nx_s", await seal(rest), 7 * 86400)]); }
+    if (p === "/api/audit") {
+      if (rl !== "owner" && rl !== "admin") return json({ detail: "Keine Rechte" }, 403);
+      return json((await E.DB.prepare("SELECT t, name, role, guild, act FROM audit ORDER BY t DESC LIMIT 40").all()).results || []);
+    }
 
     if (p === "/api/guilds") {
       const gs = await userGuilds(s);
       if (!gs) return json({ detail: "Sitzung abgelaufen" }, 401, [ck("nx_s", "", 0)]);
       const bots = await botIds();
-      return json(gs.filter(canManage).map((g) => ({ id: g.id, name: g.name, icon: g.icon, bot: bots.has(g.id) })));
+      if (sup) return json(sup.guilds.map((g) => ({ id: g.id, name: g.name + " (Support)", icon: null, bot: true })));
+      const list = gs.filter(canManage).map((g) => ({ id: g.id, name: g.name, icon: g.icon, bot: bots.has(g.id) }));
+      if (rl === "owner") for (const g of await botGuilds()) if (!list.some((x) => x.id === g.id)) list.push({ ...g, name: g.name + " (Besitzer)" });
+      return json(list);
     }
     const inv = p.match(/^\/invite\/(\d+)$/);
     if (inv) {
@@ -275,7 +330,7 @@ export async function onRequest(context) {
     const gm = p.match(/^\/api\/guilds\/(\d+)\/(settings|channels)$/);
     if (gm) {
       const [, id, what] = gm;
-      const a = await access(s, id); if (a.err) return a.err;
+      const a = await access(s, id, rl); if (a.err) return a.err;
       if (what === "channels") {
         const r = await dc(`/guilds/${id}/channels`, BOT());
         if (!r.ok) return json([]);
@@ -284,6 +339,8 @@ export async function onRequest(context) {
       }
       if (m === "GET") return json(await load(id));
       if (m === "PUT") {
+        if (a.via && !EDIT.has(rl)) return json({ detail: "Nur Ansicht: deine Team-Rolle darf nicht bearbeiten" }, 403);
+        if (a.via) await audit(s, rl, id, "Einstellungen geändert");
         const body = await req.json();
         const data = { ...(await load(id)), ...clean(body && typeof body === "object" ? body : {}) };
         if (data.workmin > data.workmax) return json({ detail: "Arbeiten: Minimum darf nicht größer als Maximum sein" }, 400);
