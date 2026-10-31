@@ -24,6 +24,7 @@ from typing import Callable, Optional
 
 import aiohttp
 import discord
+from discord import app_commands
 from discord.ext import tasks
 
 START = time.time()
@@ -175,6 +176,19 @@ def command_enabled(cfg: dict, module: str, command: str) -> bool:
 # ---------------------------------------------------------------------------------------------
 # Befehle sperren (aus bot.py in der Zugriffsprüfung aufrufen)
 # ---------------------------------------------------------------------------------------------
+_debug_zaehler = 0
+
+
+def _debug(msg: str) -> None:
+    """Zeigt die ersten 40 Prüfungen in der Konsole, damit man sieht, was der Bot entscheidet."""
+    global _debug_zaehler
+    if _debug_zaehler < 40:
+        _debug_zaehler += 1
+        print(f"[Nexora-Dashboard] {msg}")
+        if _debug_zaehler == 40:
+            print("[Nexora-Dashboard] (weitere Prüfmeldungen werden nicht mehr angezeigt)")
+
+
 async def befehl_erlaubt(interaction: discord.Interaction, befehl: Optional[str] = None) -> bool:
     """True = Befehl darf laufen. False = im Dashboard ausgeschaltet (die Antwort ist schon gesendet)."""
     if not aktiv() or interaction.guild_id is None:
@@ -182,12 +196,20 @@ async def befehl_erlaubt(interaction: discord.Interaction, befehl: Optional[str]
     if befehl is None:
         cmd = interaction.command
         if cmd is None:
+            _debug("Befehl nicht erkannt -> erlaubt")
             return True
         befehl = (cmd.root_parent or cmd).name
     modul = CMD_MODULE.get(befehl)
     if modul is None:
+        _debug(f"/{befehl}: nicht vom Dashboard verwaltet -> erlaubt")
         return True  # nicht verwaltete Befehle (z. B. /help) laufen immer
-    if command_enabled(cfg_cached(interaction.guild_id), modul, befehl):
+    gid = interaction.guild_id
+    cfg = cfg_cached(gid)
+    erlaubt = command_enabled(cfg, modul, befehl)
+    _debug(f"/{befehl} auf Server {gid}: {'erlaubt' if erlaubt else 'GESPERRT'} "
+           f"(Einstellungen geladen: {'ja' if gid in _cache else 'NEIN'}, "
+           f"{modul}.on={cfg.get(modul + '.on', 'fehlt')}, c.{befehl}={cfg.get('c.' + befehl, 'fehlt')})")
+    if erlaubt:
         return True
     if not interaction.response.is_done():
         await interaction.response.send_message(
@@ -355,6 +377,42 @@ async def beenden() -> None:
 SPIEGEL_FELDER = {spalte for spalte, *_ in ZAHLEN.values()} | {spalte for spalte, _ in TEXTE.values()} | {"log_kanal_id"}
 
 
+def _status_befehl_registrieren(bot) -> None:
+    """Registriert /dashboard: zeigt Admins, was der Bot gerade vom Dashboard weiß (zum Fehlersuchen)."""
+
+    @app_commands.command(name="dashboard", description="Zeigt den Dashboard-Status dieses Servers (nur Admins)")
+    @app_commands.guild_only()
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def dashboard_status(interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        gid = interaction.guild_id
+        cfg = await get_cfg(gid, fresh=True)  # direkt frisch vom Dashboard holen
+        aus_module = sorted(k[:-3] for k, v in cfg.items() if k.endswith(".on") and v is False)
+        aus_befehle = sorted(k[2:] for k, v in cfg.items() if k.startswith("c.") and v is False)
+        embed = discord.Embed(title="📡 Dashboard-Status", color=discord.Color.blurple())
+        embed.add_field(name="Server-ID (muss im Dashboard derselbe Server sein)", value=f"`{gid}`", inline=False)
+        embed.add_field(
+            name="Verbindung",
+            value="✅ Einstellungen soeben geladen" if cfg else "❌ Dashboard nicht erreichbar (Details in der Konsole)",
+            inline=False,
+        )
+        embed.add_field(name="Ausgeschaltete Module", value=(", ".join(aus_module) or "keine")[:1000], inline=False)
+        embed.add_field(
+            name="Ausgeschaltete Befehle",
+            value=(", ".join(f"/{c}" for c in aus_befehle) or "keine")[:1000],
+            inline=False,
+        )
+        embed.add_field(
+            name="Besitzer-Ausnahme",
+            value="an (Besitzer ist von Sperren ausgenommen)" if _besitzer_ausnahme() else "aus (gilt auch für den Besitzer)",
+            inline=False,
+        )
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
+    bot.tree.add_command(dashboard_status)
+
+
 def _besitzer_ausnahme() -> bool:
     """Standard: auch der Bot-Besitzer unterliegt den Dashboard-Sperren (DASHBOARD_BESITZER_AUSNAHME=1 = Besitzer ausgenommen)."""
     return os.environ.get("DASHBOARD_BESITZER_AUSNAHME", "0").strip() == "1"
@@ -372,6 +430,8 @@ def installieren(g: dict) -> None:
     """
     global _orig_aendern
     bot, db = g["bot"], g["db"]
+    _status_befehl_registrieren(bot)  # /dashboard zum Fehlersuchen
+    print("[Nexora-Dashboard] Anbindung eingebaut (Befehls-Sperren und /dashboard) – Version 4")
 
     # 1. Slash-Befehle: Dashboard-Sperre nach der normalen Zugriffsprüfung
     orig_pruefe = g["besitzer_pruefe_zugriff"]
