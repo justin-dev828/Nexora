@@ -122,13 +122,14 @@ const EDIT = new Set(["dev", "admin", "owner"]); // team, sup, mod = nur Ansicht
 async function roleOf(uid) {
   if (E.OWNER_ID && uid === E.OWNER_ID) return "owner";
   if (!E.NEXORA_GUILD_ID) return null;
-  const r = await cached("r:" + uid, 60000, async () => {
+  let r;
+  try { r = await cached("r:" + uid, 60000, async () => {
     const x = await dc(`/guilds/${E.NEXORA_GUILD_ID}/members/${uid}`, BOT());
     if (!x.ok) return "none";
     const ids = (await x.json()).roles || []; let best = "none";
     for (const k of ["team", "sup", "mod", "dev", "admin"]) { const id = E["ROLE_" + k.toUpperCase()]; if (id && ids.includes(id)) best = k; }
     return best;
-  });
+  }); } catch { return null; }
   return r === "none" ? null : r;
 }
 const audit = (s, role, guild, act) => E.DB.prepare("INSERT INTO audit (t,uid,name,role,guild,act) VALUES (?,?,?,?,?,?)")
@@ -287,6 +288,7 @@ export async function onRequest(context) {
     if (p === "/api/me") return json({ id: s.uid, name: s.name, role: rl, sup: sup && sup.name, edit: !(sup && !EDIT.has(rl)) });
     if (p === "/api/pin") { // jeder Nutzer hat einen Support-PIN, der alle 5 Minuten wechselt
       const gs = await userGuilds(s), bots = await botIds();
+      if (!gs) return json({ detail: "Sitzung abgelaufen" }, 401, [ck("nx_s", "", 0)]);
       const mine = gs.filter(canManage).filter((g) => bots.has(g.id)).slice(0, 15).map((g) => ({ id: g.id, name: g.name.slice(0, 30) }));
       let row = await E.DB.prepare("SELECT pin, exp FROM pins WHERE uid = ?").bind(s.uid).first();
       if (!row || row.exp < Date.now()) {
@@ -299,8 +301,10 @@ export async function onRequest(context) {
     if (p === "/api/support" && m === "POST") { // Team löst einen PIN ein
       if (!rl) return json({ detail: "Nur für das Nexora-Team" }, 403);
       const b = await req.json().catch(() => ({}));
+      const bad = await E.DB.prepare("SELECT COUNT(*) AS n FROM audit WHERE uid = ? AND act = 'PIN falsch' AND t > ?").bind(s.uid, Date.now() - 60000).first();
+      if (bad && bad.n >= 8) return json({ detail: "Zu viele Fehlversuche, bitte eine Minute warten" }, 429);
       const row = await E.DB.prepare("SELECT uid, name, guilds FROM pins WHERE pin = ? AND exp > ?").bind(String(b.pin || "").replace(/\D/g, ""), Date.now()).first();
-      if (!row) return json({ detail: "PIN ungültig oder abgelaufen" }, 404);
+      if (!row) { await audit(s, rl, "-", "PIN falsch"); return json({ detail: "PIN ungültig oder abgelaufen" }, 404); }
       await audit(s, rl, "-", "Support-PIN von " + row.name + " eingelöst");
       return json({ ok: true }, 200, [ck("nx_s", await seal({ ...s, sup: { uid: row.uid, name: row.name, guilds: JSON.parse(row.guilds), exp: Date.now() + 3600000 } }), 7 * 86400)]);
     }
@@ -340,7 +344,7 @@ export async function onRequest(context) {
       if (m === "GET") return json(await load(id));
       if (m === "PUT") {
         if (a.via && !EDIT.has(rl)) return json({ detail: "Nur Ansicht: deine Team-Rolle darf nicht bearbeiten" }, 403);
-        if (a.via) await audit(s, rl, id, "Einstellungen geändert");
+        if (a.via && !(await userGuilds(s) || []).some((g) => g.id === id && canManage(g))) await audit(s, rl, id, "Einstellungen geändert");
         const body = await req.json();
         const data = { ...(await load(id)), ...clean(body && typeof body === "object" ? body : {}) };
         if (data.workmin > data.workmax) return json({ detail: "Arbeiten: Minimum darf nicht größer als Maximum sein" }, 400);
