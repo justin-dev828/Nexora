@@ -1401,7 +1401,6 @@
     { id: "info", ic: "ℹ️", t: "Info & Spiele", d: "Ping, Serverinfo, Nutzerinfo, Avatar und Würfeln.", c: ["ping", "wuerfeln", "serverinfo", "nutzerinfo", "avatar"] },
     { id: "tracker", ic: "📈", t: "Befehls-Tracker", d: "Welche Befehle auf diesem Server wie oft genutzt werden (live)." },
     { id: "support", ic: "🔑", t: "Support & Team", d: "Dein Support-PIN und Werkzeuge für das Nexora-Team." });
-  var AI = { id: "ai", ic: "🤖", t: "KI-Assistent", d: "Fragen zum Dashboard? Der KI-Assistent antwortet sofort." };
   var AIH = [];
   var TICKETS = { id: "tickets", ic: "🎫", t: "Support-Tickets", d: "Schreib dem Nexora-Team. Antworten erscheinen hier live." };
   var TEAMCHAT = { id: "teamchat", ic: "💬", t: "Team-Chat", d: "Interner Chat nur für das Nexora-Team." };
@@ -1410,7 +1409,7 @@
 
   /* ---------- Seitenleiste mit Kategorien ---------- */
   var ORDER = ["home", "eco", "casino", "shop", "task", "panel", "mod", "admin", "log", "info", "tracker", "ai", "tickets", "support", "teamchat", "console", "data"],
-      GROUPS = { eco: "Wirtschaft", mod: "Server", tracker: "Überwachung", ai: "Support & Team", data: "Sonstiges" };
+      GROUPS = { eco: "Wirtschaft", mod: "Server", tracker: "Überwachung", "Support & Team", data: "Sonstiges" };
   function reorder() {
     var by = {}; MODS.forEach(function (m) { by[m.id] = m; }); MODS.length = 0;
     ORDER.forEach(function (id) { if (by[id]) MODS.push(by[id]); });
